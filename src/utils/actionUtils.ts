@@ -111,9 +111,7 @@ export async function storeCache(
         flush: zlib.constants.Z_SYNC_FLUSH
     });
 
-    tar.c({
-        cwd: '/'
-    }, files).pipe(gzip);
+    tar.c({}, files).pipe(gzip);
 
     core.debug(`Starting upload with primary key: ${key}`);
     let uploadResult = await blob.uploadStream(gzip);
