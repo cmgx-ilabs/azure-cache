@@ -119,6 +119,7 @@ export async function getContainerClient(): Promise<ContainerClient> {
             required: true
         });
 
+        core.info(`Connecting to storage account container: ${containerName}`);
         const container = new ContainerClient(connectionString, containerName);
         if (!(await container.exists())) {
             throw new Error(`Container '${containerName}' does not exist.`);
