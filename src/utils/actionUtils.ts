@@ -110,19 +110,23 @@ export async function storeCache(
 }
 
 export async function getContainerClient(): Promise<ContainerClient> {
-    const connectionString = core.getInput(Inputs.ConnectionString, {
-        required: true
-    });
+    try {
+        const connectionString = core.getInput(Inputs.ConnectionString, {
+            required: true
+        });
 
-    const containerName = core.getInput(Inputs.ConnectionString, {
-        required: true
-    });
+        const containerName = core.getInput(Inputs.ConnectionString, {
+            required: true
+        });
 
-    const client = BlobServiceClient.fromConnectionString(connectionString);
-    const container = client.getContainerClient(containerName);
-    if (!(await container.exists())) {
-        throw new Error(`Container '${containerName}' does not exist.`);
+        const container = new ContainerClient(connectionString, containerName);
+        if (!(await container.exists())) {
+            throw new Error(`Container '${containerName}' does not exist.`);
+        }
+
+        return container;
+    } catch (e: unknown) {
+        const m = e as Error;
+        throw new Error(`Unable to connect to container: ${m.message}`);
     }
-
-    return container;
 }
