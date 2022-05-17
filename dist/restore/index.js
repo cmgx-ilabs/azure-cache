@@ -61290,6 +61290,7 @@ const core = __importStar(__nccwpck_require__(2186));
 const storage_blob_1 = __nccwpck_require__(4100);
 const execa_1 = __nccwpck_require__(276);
 const tar_1 = __importDefault(__nccwpck_require__(4674));
+const zlib_1 = __importDefault(__nccwpck_require__(9796));
 const constants_1 = __nccwpck_require__(9042);
 function setCacheHit(isCacheHit) {
     core.setOutput(constants_1.Outputs.CacheHit, isCacheHit.toString());
@@ -61345,13 +61346,15 @@ async function unpackCache(container, key) {
         throw new Error(`This is somehow running in a browser.`);
     }
     const body = downloadResult.readableStreamBody;
-    const tar = (0, execa_1.execa)("tar", ["-xz", "-C", "/"], {
+    const gzip = zlib_1.default.createBrotliDecompress();
+    body.pipe(gzip);
+    const tar = (0, execa_1.execa)("tar", ["-x", "-C", "/"], {
         stderr: "inherit"
     });
     if (tar.stdin === null) {
         throw new Error("Decompression failed.");
     }
-    body.pipe(tar.stdin);
+    gzip.pipe(tar.stdin);
     await new Promise((resolve, reject) => {
         body.on("error", reject);
         body.on("end", resolve);
@@ -61368,22 +61371,14 @@ async function storeCache(container, key, files) {
     const blob = container.getBlockBlobClient(key);
     await blob.deleteIfExists();
     core.debug(`Starting compression with primary key: ${key}`);
-    const gzip = (0, execa_1.execa)("gzip", ["-"], {
-        stderr: "inherit"
-    });
-    if (gzip.stdin === null || gzip.stdout === null) {
-        throw new Error("Compression failed.");
-    }
+    const gzip = zlib_1.default.createBrotliCompress();
     tar_1.default.c({
         cwd: '/'
-    }, files).pipe(gzip.stdin);
+    }, files).pipe(gzip);
     core.debug(`Starting upload with primary key: ${key}`);
-    let [uploadResult, _] = await Promise.all([blob.uploadStream(gzip.stdout), gzip]);
+    let uploadResult = await blob.uploadStream(gzip);
     if (uploadResult.errorCode) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
-    }
-    if (gzip.exitCode !== 0) {
-        throw new Error(`gzip exited with ${gzip.exitCode}`);
     }
     core.debug(`Upload completed, marking as valid: ${key}`);
     await blob.setMetadata({
