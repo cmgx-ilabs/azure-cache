@@ -71,7 +71,9 @@ export async function unpackCache(
     }
     const body = downloadResult.readableStreamBody;
 
-    const gzip = zlib.createBrotliDecompress();
+    const gzip = zlib.createBrotliDecompress({
+        flush: zlib.constants.Z_SYNC_FLUSH
+    });
     body.pipe(gzip);
 
     const tar = execa("tar", ["-x", "-C", "/"], {
@@ -105,7 +107,9 @@ export async function storeCache(
     
     core.debug(`Starting compression with primary key: ${key}`);
 
-    const gzip = zlib.createBrotliCompress();
+    const gzip = zlib.createGzip({
+        flush: zlib.constants.Z_SYNC_FLUSH
+    });
 
     tar.c({
         cwd: '/'

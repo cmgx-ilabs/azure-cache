@@ -69148,7 +69148,9 @@ async function unpackCache(container, key) {
         throw new Error(`This is somehow running in a browser.`);
     }
     const body = downloadResult.readableStreamBody;
-    const gzip = zlib_1.default.createBrotliDecompress();
+    const gzip = zlib_1.default.createBrotliDecompress({
+        flush: zlib_1.default.constants.Z_SYNC_FLUSH
+    });
     body.pipe(gzip);
     const tar = (0, execa_1.execa)("tar", ["-x", "-C", "/"], {
         stderr: "inherit"
@@ -69173,7 +69175,9 @@ async function storeCache(container, key, files) {
     const blob = container.getBlockBlobClient(key);
     await blob.deleteIfExists();
     core.debug(`Starting compression with primary key: ${key}`);
-    const gzip = zlib_1.default.createBrotliCompress();
+    const gzip = zlib_1.default.createGzip({
+        flush: zlib_1.default.constants.Z_SYNC_FLUSH
+    });
     tar_1.default.c({
         cwd: '/'
     }, files).pipe(gzip);
