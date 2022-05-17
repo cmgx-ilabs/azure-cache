@@ -62310,6 +62310,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const globby_1 = __nccwpck_require__(3680);
+const path_1 = __nccwpck_require__(1017);
 const constants_1 = __nccwpck_require__(9042);
 const utils = __importStar(__nccwpck_require__(6850));
 // Catch and log any unhandled exceptions.  These exceptions can leak out of the uploadChunk method in
@@ -62332,10 +62333,22 @@ async function run() {
             core.info(`Cache hit occurred on the primary key ${primaryKey}, not saving cache.`);
             return;
         }
-        const cachePaths = utils.getInputAsArray(constants_1.Inputs.Path, {
+        let cachePaths = utils.getInputAsArray(constants_1.Inputs.Path, {
             required: true
         });
-        const files = await (0, globby_1.globby)(cachePaths);
+        cachePaths = cachePaths.map(x => {
+            if (x.startsWith("~/")) {
+                return utils.expand(`$HOME${x.substring(1)}`);
+            }
+            x = utils.expand(x);
+            if (!x.startsWith("/")) {
+                x = (0, path_1.join)(process.cwd(), x);
+            }
+            return x;
+        });
+        const files = await (0, globby_1.globby)(cachePaths, {
+            cwd: "/"
+        });
         const container = await utils.getContainerClient();
         core.info(`Caching ${primaryKey} with ${files.length} files`);
         try {
@@ -62386,7 +62399,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getContainerClient = exports.storeCache = exports.unpackCache = exports.getInputAsInt = exports.getInputAsArray = exports.isValidEvent = exports.logWarning = exports.getCacheHit = exports.setCacheHit = void 0;
+exports.expand = exports.getContainerClient = exports.storeCache = exports.unpackCache = exports.getInputAsInt = exports.getInputAsArray = exports.isValidEvent = exports.logWarning = exports.getCacheHit = exports.setCacheHit = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const storage_blob_1 = __nccwpck_require__(4100);
 const execa_1 = __nccwpck_require__(3258);
@@ -62509,6 +62522,37 @@ async function getContainerClient() {
     }
 }
 exports.getContainerClient = getContainerClient;
+function expand(envValue) {
+    const matches = envValue.match(/(.?\${*[\w]*(?::-[\w/]*)?}*)/g) || [];
+    return matches.reduce(function (newEnv, match, index) {
+        const parts = /(.?)\${*([\w]*(?::-[\w/]*)?)?}*/g.exec(match);
+        if (!parts || parts.length === 0) {
+            return newEnv;
+        }
+        const prefix = parts[1];
+        let value, replacePart;
+        if (prefix === '\\') {
+            replacePart = parts[0];
+            value = replacePart.replace('\\$', '$');
+        }
+        else {
+            const keyParts = parts[2].split(':-');
+            const key = keyParts[0];
+            replacePart = parts[0].substring(prefix.length);
+            value = process.env[key] || '';
+            // If the value is found, remove nested expansions.
+            if (keyParts.length > 1 && value) {
+                const replaceNested = matches[index + 1];
+                matches[index + 1] = '';
+                newEnv = newEnv.replace(replaceNested, '');
+            }
+            // Resolve recursive interpolations
+            value = expand(value);
+        }
+        return newEnv.replace(replacePart, value);
+    }, envValue);
+}
+exports.expand = expand;
 
 
 /***/ }),

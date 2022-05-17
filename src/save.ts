@@ -1,5 +1,6 @@
 import * as core from "@actions/core";
 import { globby } from "globby";
+import { join } from "path";
 
 import { Events, Inputs, State } from "./constants";
 import * as utils from "./utils/actionUtils";
@@ -34,11 +35,24 @@ async function run(): Promise<void> {
             return;
         }
 
-        const cachePaths = utils.getInputAsArray(Inputs.Path, {
+        let cachePaths = utils.getInputAsArray(Inputs.Path, {
             required: true
         });
 
-        const files = await globby(cachePaths);
+        cachePaths = cachePaths.map(x => {
+            if (x.startsWith("~/")) {
+                return utils.expand(`$HOME${x.substring(1)}`)
+            }
+            x = utils.expand(x);
+            if (!x.startsWith("/")) {
+                x = join(process.cwd(), x);
+            }
+            return x;
+        })
+
+        const files = await globby(cachePaths, {
+            cwd: "/"
+        });
 
         const container = await utils.getContainerClient();
         core.info(`Caching ${primaryKey} with ${files.length} files`);

@@ -143,3 +143,40 @@ export async function getContainerClient(): Promise<ContainerClient> {
         throw new Error(`Unable to connect to container: ${m.message}`);
     }
 }
+
+export function expand(envValue: string) {
+    const matches = envValue.match(/(.?\${*[\w]*(?::-[\w/]*)?}*)/g) || []
+  
+    return matches.reduce(function (newEnv, match, index) {
+      const parts = /(.?)\${*([\w]*(?::-[\w/]*)?)?}*/g.exec(match)
+      if (!parts || parts.length === 0) {
+        return newEnv
+      }
+  
+      const prefix = parts[1]
+  
+      let value: string, replacePart: string;
+  
+      if (prefix === '\\') {
+        replacePart = parts[0]
+        value = replacePart.replace('\\$', '$')
+      } else {
+        const keyParts = parts[2].split(':-')
+        const key = keyParts[0]
+        replacePart = parts[0].substring(prefix.length)
+        value = process.env[key] || '';
+  
+        // If the value is found, remove nested expansions.
+        if (keyParts.length > 1 && value) {
+          const replaceNested = matches[index + 1]
+          matches[index + 1] = ''
+  
+          newEnv = newEnv.replace(replaceNested, '')
+        }
+        // Resolve recursive interpolations
+        value = expand(value);
+      }
+  
+      return newEnv.replace(replacePart, value)
+    }, envValue)
+  }
