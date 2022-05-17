@@ -61236,11 +61236,11 @@ async function run() {
             utils.logWarning(typedError.message);
         }
         if (hit)
-            core.info(`Cache not found for input keys: ${primaryKey}`);
+            core.info(`Cache restored from key: ${primaryKey}`);
         else if (failOnMiss)
             core.setFailed(`Cache hit required and was not found for key: ${primaryKey}`);
         else
-            core.info(`Cache restored from key: ${primaryKey}`);
+            core.info(`Cache not found for input keys: ${primaryKey}`);
         utils.setCacheHit(hit);
     }
     catch (error) {
@@ -61336,6 +61336,7 @@ async function unpackCache(container, key) {
     if (((_a = (await blob.getProperties()).metadata) === null || _a === void 0 ? void 0 : _a.valid) !== "true") {
         return false;
     }
+    core.info(`Downloading cache for: ${key}`);
     const downloadResult = await blob.download();
     if (downloadResult.errorCode) {
         throw new Error(`Failed to download: ${downloadResult.errorCode}`);

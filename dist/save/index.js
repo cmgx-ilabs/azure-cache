@@ -69138,6 +69138,7 @@ async function unpackCache(container, key) {
     if (((_a = (await blob.getProperties()).metadata) === null || _a === void 0 ? void 0 : _a.valid) !== "true") {
         return false;
     }
+    core.info(`Downloading cache for: ${key}`);
     const downloadResult = await blob.download();
     if (downloadResult.errorCode) {
         throw new Error(`Failed to download: ${downloadResult.errorCode}`);

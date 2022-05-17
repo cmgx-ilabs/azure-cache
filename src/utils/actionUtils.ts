@@ -60,6 +60,7 @@ export async function unpackCache(
         return false;
     }
 
+    core.info(`Downloading cache for: ${key}`)
     const downloadResult = await blob.download();
     if (downloadResult.errorCode) {
         throw new Error(`Failed to download: ${downloadResult.errorCode}`);
