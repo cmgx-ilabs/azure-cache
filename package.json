@@ -5,7 +5,7 @@
   "description": "Cache dependencies and build outputs",
   "main": "dist/restore/index.js",
   "scripts": {
-    "build": "tsc && ncc build --target es6 -s -o dist/restore src/restore.ts && ncc build --target es6 -s -o dist/save src/save.ts",
+    "build": "tsc && ncc build --target es2019 -s -o dist/restore src/restore.ts && ncc build --target es2019 -s -o dist/save src/save.ts",
     "test": "tsc --noEmit && jest --coverage",
     "lint": "eslint **/*.ts --cache",
     "format": "prettier --write **/*.ts",
@@ -28,11 +28,10 @@
     "@actions/io": "^1.1.2",
     "@azure/storage-blob": "^12.10.0",
     "execa": "^6.1.0",
-    "glob": "^8.0.3"
+    "globby": "^13.1.1"
   },
   "devDependencies": {
     "@types/execa": "^2.0.0",
-    "@types/glob": "^7.2.0",
     "@types/jest": "^27.5.0",
     "@types/nock": "^11.1.0",
     "@types/node": "^16.11.33",

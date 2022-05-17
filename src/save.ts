@@ -1,5 +1,5 @@
 import * as core from "@actions/core";
-import glob from "glob";
+import { globby } from "globby";
 
 import { Events, Inputs, State } from "./constants";
 import * as utils from "./utils/actionUtils";
@@ -38,10 +38,13 @@ async function run(): Promise<void> {
             required: true
         });
 
+        const files = await globby(cachePaths);
+
         const container = await utils.getContainerClient();
+        core.info(`Caching ${primaryKey} with ${files.length} files`);
 
         try {
-            await utils.storeCache(container, primaryKey, cachePaths);
+            await utils.storeCache(container, primaryKey, files);
             core.info(`Cache saved with key: ${primaryKey}`);
         } catch (error: unknown) {
             const typedError = error as Error;

@@ -54524,49 +54524,38 @@ var __importStar = (this && this.__importStar) || function (mod) {
     __setModuleDefault(result, mod);
     return result;
 };
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const constants_1 = __nccwpck_require__(9042);
 const utils = __importStar(__nccwpck_require__(6850));
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
+async function run() {
+    try {
+        // Validate inputs, this can cause task failure
+        if (!utils.isValidEvent()) {
+            utils.logWarning(`Event Validation Error: The event type ${process.env[constants_1.Events.Key]} is not supported because it's not tied to a branch or tag ref.`);
+            return;
+        }
+        const primaryKey = core.getInput(constants_1.Inputs.Key, { required: true });
+        core.saveState(constants_1.State.CachePrimaryKey, primaryKey);
+        const container = await utils.getContainerClient();
         try {
-            // Validate inputs, this can cause task failure
-            if (!utils.isValidEvent()) {
-                utils.logWarning(`Event Validation Error: The event type ${process.env[constants_1.Events.Key]} is not supported because it's not tied to a branch or tag ref.`);
+            const cacheKey = await utils.unpackCache(container, primaryKey);
+            if (!cacheKey) {
+                core.info(`Cache not found for input keys: ${primaryKey}`);
                 return;
             }
-            const primaryKey = core.getInput(constants_1.Inputs.Key, { required: true });
-            core.saveState(constants_1.State.CachePrimaryKey, primaryKey);
-            const container = yield utils.getContainerClient();
-            try {
-                const cacheKey = yield utils.unpackCache(container, primaryKey);
-                if (!cacheKey) {
-                    core.info(`Cache not found for input keys: ${primaryKey}`);
-                    return;
-                }
-                utils.setCacheHit(true);
-                core.info(`Cache restored from key: ${cacheKey}`);
-            }
-            catch (error) {
-                const typedError = error;
-                utils.logWarning(typedError.message);
-                utils.setCacheHit(false);
-            }
+            utils.setCacheHit(true);
+            core.info(`Cache restored from key: ${cacheKey}`);
         }
         catch (error) {
-            core.setFailed(error.message);
+            const typedError = error;
+            utils.logWarning(typedError.message);
+            utils.setCacheHit(false);
         }
-    });
+    }
+    catch (error) {
+        core.setFailed(error.message);
+    }
 }
 run();
 exports["default"] = run;
@@ -54601,15 +54590,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
     if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getContainerClient = exports.storeCache = exports.unpackCache = exports.getInputAsInt = exports.getInputAsArray = exports.isValidEvent = exports.logWarning = exports.getCacheHit = exports.setCacheHit = void 0;
@@ -54653,92 +54633,86 @@ function getInputAsInt(name, options) {
     return value;
 }
 exports.getInputAsInt = getInputAsInt;
-function unpackCache(container, key) {
+async function unpackCache(container, key) {
     var _a;
-    return __awaiter(this, void 0, void 0, function* () {
-        const blob = container.getBlockBlobClient(key);
-        if (!(yield blob.exists())) {
-            return false;
-        }
-        if (((_a = (yield blob.getProperties()).metadata) === null || _a === void 0 ? void 0 : _a.valid) !== "true") {
-            return false;
-        }
-        const downloadResult = yield blob.download();
-        if (downloadResult.errorCode !== null) {
-            throw new Error(`Failed to upload: ${downloadResult.errorCode}`);
-        }
-        if (typeof downloadResult.readableStreamBody === "undefined") {
-            throw new Error(`This is somehow running in a browser.`);
-        }
-        const body = downloadResult.readableStreamBody;
-        const tar = (0, execa_1.execa)("tar", ["-xzf", "-", "--zstd", "-C", "/"], {
-            stderr: "inherit"
-        });
-        if (tar.stdin === null) {
-            throw new Error("Decompression failed.");
-        }
-        body.pipe(tar.stdin);
-        yield new Promise((resolve, reject) => {
-            body.on("error", reject);
-            body.on("end", resolve);
-        });
-        yield tar;
-        if (tar.exitCode !== 0) {
-            throw new Error(`tar exited with ${tar.exitCode}`);
-        }
-        return true;
+    const blob = container.getBlockBlobClient(key);
+    if (!(await blob.exists())) {
+        return false;
+    }
+    if (((_a = (await blob.getProperties()).metadata) === null || _a === void 0 ? void 0 : _a.valid) !== "true") {
+        return false;
+    }
+    const downloadResult = await blob.download();
+    if (downloadResult.errorCode !== null) {
+        throw new Error(`Failed to upload: ${downloadResult.errorCode}`);
+    }
+    if (typeof downloadResult.readableStreamBody === "undefined") {
+        throw new Error(`This is somehow running in a browser.`);
+    }
+    const body = downloadResult.readableStreamBody;
+    const tar = (0, execa_1.execa)("tar", ["-xzf", "-", "--zstd", "-C", "/"], {
+        stderr: "inherit"
     });
+    if (tar.stdin === null) {
+        throw new Error("Decompression failed.");
+    }
+    body.pipe(tar.stdin);
+    await new Promise((resolve, reject) => {
+        body.on("error", reject);
+        body.on("end", resolve);
+    });
+    await tar;
+    if (tar.exitCode !== 0) {
+        throw new Error(`tar exited with ${tar.exitCode}`);
+    }
+    return true;
 }
 exports.unpackCache = unpackCache;
-function storeCache(container, key, files) {
-    return __awaiter(this, void 0, void 0, function* () {
-        core.debug(`Starting compression with primary key: ${key}`);
-        const tar = (0, execa_1.execa)("tar", ["-czf", "--zstd", ...files], {
-            stderr: "inherit",
-            shell: true
-        });
-        if (tar.stdout === null) {
-            throw new Error("Compression failed.");
-        }
-        core.debug(`Connecting to blob with key: ${key}`);
-        const blob = container.getBlockBlobClient(key);
-        yield blob.deleteIfExists();
-        core.debug(`Starting upload with primary key: ${key}`);
-        let [uploadResult, _] = yield Promise.all([blob.uploadStream(tar.stdout), tar]);
-        if (uploadResult.errorCode !== null) {
-            throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
-        }
-        if (tar.exitCode !== 0) {
-            throw new Error(`tar exited with ${tar.exitCode}`);
-        }
-        core.debug(`Upload completed, marking as valid: ${key}`);
-        yield blob.setMetadata({
-            valid: "true"
-        });
+async function storeCache(container, key, files) {
+    core.debug(`Starting compression with primary key: ${key}`);
+    const tar = (0, execa_1.execa)("tar", ["-czf", "--zstd", ...files], {
+        stderr: "inherit",
+        shell: true
+    });
+    if (tar.stdout === null) {
+        throw new Error("Compression failed.");
+    }
+    core.debug(`Connecting to blob with key: ${key}`);
+    const blob = container.getBlockBlobClient(key);
+    await blob.deleteIfExists();
+    core.debug(`Starting upload with primary key: ${key}`);
+    let [uploadResult, _] = await Promise.all([blob.uploadStream(tar.stdout), tar]);
+    if (uploadResult.errorCode !== null) {
+        throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
+    }
+    if (tar.exitCode !== 0) {
+        throw new Error(`tar exited with ${tar.exitCode}`);
+    }
+    core.debug(`Upload completed, marking as valid: ${key}`);
+    await blob.setMetadata({
+        valid: "true"
     });
 }
 exports.storeCache = storeCache;
-function getContainerClient() {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const connectionString = core.getInput(constants_1.Inputs.ConnectionString, {
-                required: true
-            });
-            const containerName = core.getInput(constants_1.Inputs.Container, {
-                required: true
-            });
-            core.info(`Connecting to storage account container: ${containerName}`);
-            const container = new storage_blob_1.ContainerClient(connectionString, containerName);
-            if (!(yield container.exists())) {
-                throw new Error(`Container '${containerName}' does not exist.`);
-            }
-            return container;
+async function getContainerClient() {
+    try {
+        const connectionString = core.getInput(constants_1.Inputs.ConnectionString, {
+            required: true
+        });
+        const containerName = core.getInput(constants_1.Inputs.Container, {
+            required: true
+        });
+        core.info(`Connecting to storage account container: ${containerName}`);
+        const container = new storage_blob_1.ContainerClient(connectionString, containerName);
+        if (!(await container.exists())) {
+            throw new Error(`Container '${containerName}' does not exist.`);
         }
-        catch (e) {
-            const m = e;
-            throw new Error(`Unable to connect to container: ${m.message}`);
-        }
-    });
+        return container;
+    }
+    catch (e) {
+        const m = e;
+        throw new Error(`Unable to connect to container: ${m.message}`);
+    }
 }
 exports.getContainerClient = getContainerClient;
 
