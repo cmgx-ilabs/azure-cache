@@ -54670,7 +54670,7 @@ async function unpackCache(container, key) {
 exports.unpackCache = unpackCache;
 async function storeCache(container, key, files) {
     core.debug(`Starting compression with primary key: ${key}`);
-    const tar = (0, execa_1.execa)("tar", ["-czf", "--zstd", ...files], {
+    const tar = (0, execa_1.execa)("tar", ["-cz", "--zstd", ...files], {
         stderr: "inherit",
         shell: true
     });
