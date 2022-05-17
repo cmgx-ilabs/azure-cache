@@ -1,8 +1,6 @@
 import * as core from "@actions/core";
 import { ContainerClient } from "@azure/storage-blob";
 import { execa } from "execa";
-import tar from "tar";
-import zlib from "zlib";
 
 import { Inputs, Outputs, RefKey, State } from "../constants";
 
@@ -61,7 +59,7 @@ export async function unpackCache(
         return false;
     }
 
-    core.info(`Downloading cache for: ${key}`)
+    core.info(`Downloading cache for: ${key}`);
     const downloadResult = await blob.download();
     if (downloadResult.errorCode) {
         throw new Error(`Failed to download: ${downloadResult.errorCode}`);
@@ -71,9 +69,21 @@ export async function unpackCache(
     }
     const body = downloadResult.readableStreamBody;
 
-    body.pipe(tar.x({
-        C: process.cwd()
-    }));
+    const tar = execa("tar", ["-x", "--zstd"], {
+        stderr: "inherit"
+    });
+    if (tar.stdin === null) {
+        throw new Error("Decompression failed.");
+    }
+    body.pipe(tar.stdin);
+    await new Promise((resolve, reject) => {
+        body.on("error", reject);
+        body.on("end", resolve);
+    });
+    await tar;
+    if (tar.exitCode !== 0) {
+        throw new Error(`tar exited with ${tar.exitCode}`);
+    }
 
     return true;
 }
@@ -83,19 +93,27 @@ export async function storeCache(
     key: string,
     files: string[]
 ): Promise<void> {
-
     core.debug(`Connecting to blob with key: ${key}`);
     const blob = container.getBlockBlobClient(key);
     await blob.deleteIfExists();
-    
+
     core.debug(`Starting compression with primary key: ${key}`);
 
-    const tarFile = tar.c({
-        z: true
-    }, files);
+    const zstd = execa("tar", ["--files-from=-", "-"], {
+        stderr: "inherit"
+    });
 
     core.debug(`Starting upload with primary key: ${key}`);
-    let uploadResult = await blob.uploadStream(tarFile);
+    const uploadResultTask = blob.uploadStream(zstd.stdout!);
+
+    zstd.stdin?.write(Buffer.from(files.join("\n"), "utf8"));
+    zstd.stdin?.end();
+
+    await zstd;
+    if (zstd.exitCode != 0) {
+        throw new Error(`zstd exited with ${zstd.exitCode}`);
+    }
+    const uploadResult = await uploadResultTask;
 
     if (uploadResult.errorCode) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
@@ -131,38 +149,36 @@ export async function getContainerClient(): Promise<ContainerClient> {
 }
 
 export function expand(envValue: string) {
-    const matches = envValue.match(/(.?\${*[\w]*(?::-[\w/]*)?}*)/g) || []
-  
+    const matches = envValue.match(/(.?\${*[\w]*(?::-[\w/]*)?}*)/g) || [];
     return matches.reduce(function (newEnv, match, index) {
-      const parts = /(.?)\${*([\w]*(?::-[\w/]*)?)?}*/g.exec(match)
-      if (!parts || parts.length === 0) {
-        return newEnv
-      }
-  
-      const prefix = parts[1]
-  
-      let value: string, replacePart: string;
-  
-      if (prefix === '\\') {
-        replacePart = parts[0]
-        value = replacePart.replace('\\$', '$')
-      } else {
-        const keyParts = parts[2].split(':-')
-        const key = keyParts[0]
-        replacePart = parts[0].substring(prefix.length)
-        value = process.env[key] || '';
-  
-        // If the value is found, remove nested expansions.
-        if (keyParts.length > 1 && value) {
-          const replaceNested = matches[index + 1]
-          matches[index + 1] = ''
-  
-          newEnv = newEnv.replace(replaceNested, '')
+        const parts = /(.?)\${*([\w]*(?::-[\w/]*)?)?}*/g.exec(match);
+        if (!parts || parts.length === 0) {
+            return newEnv;
         }
-        // Resolve recursive interpolations
-        value = expand(value);
-      }
-  
-      return newEnv.replace(replacePart, value)
-    }, envValue)
-  }
+
+        const prefix = parts[1];
+        let value: string, replacePart: string;
+
+        if (prefix === "\\") {
+            replacePart = parts[0];
+            value = replacePart.replace("\\$", "$");
+        } else {
+            const keyParts = parts[2].split(":-");
+            const key = keyParts[0];
+            replacePart = parts[0].substring(prefix.length);
+            value = process.env[key] || "";
+
+            // If the value is found, remove nested expansions.
+            if (keyParts.length > 1 && value) {
+                const replaceNested = matches[index + 1];
+                matches[index + 1] = "";
+
+                newEnv = newEnv.replace(replaceNested, "");
+            }
+            // Resolve recursive interpolations
+            value = expand(value);
+        }
+
+        return newEnv.replace(replacePart, value);
+    }, envValue);
+}

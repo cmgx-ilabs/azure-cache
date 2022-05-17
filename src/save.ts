@@ -1,6 +1,5 @@
 import * as core from "@actions/core";
 import { globby } from "globby";
-import { join } from "path";
 
 import { Events, Inputs, State } from "./constants";
 import * as utils from "./utils/actionUtils";
@@ -39,7 +38,7 @@ async function run(): Promise<void> {
             required: true
         });
 
-        cachePaths = cachePaths.map(utils.expand)
+        cachePaths = cachePaths.map(utils.expand);
 
         const files = await globby(cachePaths);
 

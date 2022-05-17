@@ -18,7 +18,9 @@ async function run(): Promise<void> {
         const primaryKey = core.getInput(Inputs.Key, { required: true });
         core.saveState(State.CachePrimaryKey, primaryKey);
 
-        const failOnMiss = core.getBooleanInput(Inputs.FailOnMiss, { required: false });
+        const failOnMiss = core.getBooleanInput(Inputs.FailOnMiss, {
+            required: false
+        });
         if (!failOnMiss) {
             core.getInput(Inputs.Path, { required: true });
         }
@@ -34,9 +36,12 @@ async function run(): Promise<void> {
         }
 
         if (hit) core.info(`Cache restored from key: ${primaryKey}`);
-        else if (failOnMiss) core.setFailed(`Cache hit required and was not found for key: ${primaryKey}`);
+        else if (failOnMiss)
+            core.setFailed(
+                `Cache hit required and was not found for key: ${primaryKey}`
+            );
         else core.info(`Cache not found for input keys: ${primaryKey}`);
-        
+
         utils.setCacheHit(hit);
     } catch (error: unknown) {
         core.setFailed((error as Error).message);
