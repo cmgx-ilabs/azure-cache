@@ -69145,7 +69145,7 @@ async function unpackCache(container, key) {
         throw new Error(`This is somehow running in a browser.`);
     }
     const body = downloadResult.readableStreamBody;
-    const tar = (0, execa_1.execa)("tar", ["-xzf", "-", "--zstd", "-C", "/"], {
+    const tar = (0, execa_1.execa)("tar", ["-x", "--zstd", "-C", "/"], {
         stderr: "inherit"
     });
     if (tar.stdin === null) {

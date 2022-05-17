@@ -69,7 +69,7 @@ export async function unpackCache(
     }
     const body = downloadResult.readableStreamBody;
 
-    const tar = execa("tar", ["-xzf", "-", "--zstd", "-C", "/"], {
+    const tar = execa("tar", ["-x", "--zstd", "-C", "/"], {
         stderr: "inherit"
     });
     if (tar.stdin === null) {
