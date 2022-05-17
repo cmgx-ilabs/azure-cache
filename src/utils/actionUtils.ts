@@ -71,13 +71,16 @@ export async function unpackCache(
     }
     const body = downloadResult.readableStreamBody;
 
-    const tar = execa("tar", ["-xz", "-C", "/"], {
+    const gzip = zlib.createBrotliDecompress();
+    body.pipe(gzip);
+
+    const tar = execa("tar", ["-x", "-C", "/"], {
         stderr: "inherit"
     });
     if (tar.stdin === null) {
         throw new Error("Decompression failed.");
     }
-    body.pipe(tar.stdin);
+    gzip.pipe(tar.stdin);
     await new Promise((resolve, reject) => {
         body.on("error", reject);
         body.on("end", resolve);
