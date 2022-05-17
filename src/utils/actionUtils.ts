@@ -1,46 +1,16 @@
-import * as cache from "@actions/cache";
 import * as core from "@actions/core";
+import { BlobServiceClient, ContainerClient } from "@azure/storage-blob";
+import { execa } from "execa";
 
-import { Outputs, RefKey, State } from "../constants";
+import { Inputs, Outputs, RefKey, State } from "../constants";
 
-export function isGhes(): boolean {
-    const ghUrl = new URL(
-        process.env["GITHUB_SERVER_URL"] || "https://github.com"
-    );
-    return ghUrl.hostname.toUpperCase() !== "GITHUB.COM";
-}
-
-export function isExactKeyMatch(key: string, cacheKey?: string): boolean {
-    return !!(
-        cacheKey &&
-        cacheKey.localeCompare(key, undefined, {
-            sensitivity: "accent"
-        }) === 0
-    );
-}
-
-export function setCacheState(state: string): void {
-    core.saveState(State.CacheMatchedKey, state);
-}
-
-export function setCacheHitOutput(isCacheHit: boolean): void {
+export function setCacheHit(isCacheHit: boolean): void {
     core.setOutput(Outputs.CacheHit, isCacheHit.toString());
+    core.saveState(State.CacheHit, isCacheHit.toString());
 }
 
-export function setOutputAndState(key: string, cacheKey?: string): void {
-    setCacheHitOutput(isExactKeyMatch(key, cacheKey));
-    // Store the matched cache key if it exists
-    cacheKey && setCacheState(cacheKey);
-}
-
-export function getCacheState(): string | undefined {
-    const cacheKey = core.getState(State.CacheMatchedKey);
-    if (cacheKey) {
-        core.debug(`Cache state/key: ${cacheKey}`);
-        return cacheKey;
-    }
-
-    return undefined;
+export function getCacheHit(): boolean {
+    return core.getState(State.CacheHit) === "true";
 }
 
 export function logWarning(message: string): void {
@@ -76,19 +46,83 @@ export function getInputAsInt(
     return value;
 }
 
-export function isCacheFeatureAvailable(): boolean {
-    if (!cache.isFeatureAvailable()) {
-        if (isGhes()) {
-            logWarning(
-                "Cache action is only supported on GHES version >= 3.5. If you are on version >=3.5 Please check with GHES admin if Actions cache service is enabled or not."
-            );
-        } else {
-            logWarning(
-                "An internal error has occurred in cache backend. Please check https://www.githubstatus.com/ for any ongoing issue in actions."
-            );
-        }
+export async function unpackCache(
+    container: ContainerClient,
+    key: string
+): Promise<boolean> {
+    const blob = container.getBlockBlobClient(key);
+    if (!(await blob.exists())) {
         return false;
     }
 
+    if ((await blob.getProperties()).metadata?.valid !== "true") {
+        return false;
+    }
+
+    const downloadResult = await blob.download();
+    if (downloadResult.errorCode !== null) {
+        throw new Error(`Failed to upload: ${downloadResult.errorCode}`);
+    }
+    if (typeof downloadResult.readableStreamBody === "undefined") {
+        throw new Error(`This is somehow running in a browser.`);
+    }
+    const body = downloadResult.readableStreamBody;
+
+    const tar = execa("tar", ["-xzf", "-", "--zstd", "-C", "/"]);
+    if (tar.stdin === null) {
+        throw new Error((await tar).stderr.toString());
+    }
+    body.pipe(tar.stdin);
+    await new Promise((resolve, reject) => {
+        body.on("error", reject);
+        body.on("end", resolve);
+    });
+    await tar;
+
     return true;
+}
+
+export async function storeCache(
+    container: ContainerClient,
+    key: string,
+    files: string[]
+): Promise<void> {
+    core.debug(`Starting compression with primary key: ${key}`);
+    const tar = execa("tar", ["-cf", "--zstd", ...files]);
+    if (tar.stdout === null) {
+        throw new Error((await tar).stderr.toString());
+    }
+
+    core.debug(`Starting upload with primary key: ${key}`);
+    const blob = container.getBlockBlobClient(key);
+    await blob.deleteIfExists();
+    const uploadResult = await blob.uploadStream(tar.stdout);
+
+    if (uploadResult.errorCode !== null) {
+        throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
+    }
+    await tar;
+
+    core.debug(`Upload completed, marking as valid: ${key}`);
+    await blob.setMetadata({
+        valid: "true"
+    });
+}
+
+export async function getContainerClient(): Promise<ContainerClient> {
+    const connectionString = core.getInput(Inputs.ConnectionString, {
+        required: true
+    });
+
+    const containerName = core.getInput(Inputs.ConnectionString, {
+        required: true
+    });
+
+    const client = BlobServiceClient.fromConnectionString(connectionString);
+    const container = client.getContainerClient(containerName);
+    if (!(await container.exists())) {
+        throw new Error(`Container '${containerName}' does not exist.`);
+    }
+
+    return container;
 }

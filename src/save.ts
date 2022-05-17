@@ -1,5 +1,5 @@
-import * as cache from "@actions/cache";
 import * as core from "@actions/core";
+import { globby } from "globby";
 
 import { Events, Inputs, State } from "./constants";
 import * as utils from "./utils/actionUtils";
@@ -11,10 +11,6 @@ process.on("uncaughtException", e => utils.logWarning(e.message));
 
 async function run(): Promise<void> {
     try {
-        if (!utils.isCacheFeatureAvailable()) {
-            return;
-        }
-
         if (!utils.isValidEvent()) {
             utils.logWarning(
                 `Event Validation Error: The event type ${
@@ -24,8 +20,6 @@ async function run(): Promise<void> {
             return;
         }
 
-        const state = utils.getCacheState();
-
         // Inputs are re-evaluted before the post action, so we want the original key used for restore
         const primaryKey = core.getState(State.CachePrimaryKey);
         if (!primaryKey) {
@@ -33,7 +27,7 @@ async function run(): Promise<void> {
             return;
         }
 
-        if (utils.isExactKeyMatch(primaryKey, state)) {
+        if (utils.getCacheHit()) {
             core.info(
                 `Cache hit occurred on the primary key ${primaryKey}, not saving cache.`
             );
@@ -44,20 +38,16 @@ async function run(): Promise<void> {
             required: true
         });
 
+        const files = await globby(cachePaths);
+
+        const container = await utils.getContainerClient();
+
         try {
-            await cache.saveCache(cachePaths, primaryKey, {
-                uploadChunkSize: utils.getInputAsInt(Inputs.UploadChunkSize)
-            });
+            await utils.storeCache(container, primaryKey, files);
             core.info(`Cache saved with key: ${primaryKey}`);
         } catch (error: unknown) {
             const typedError = error as Error;
-            if (typedError.name === cache.ValidationError.name) {
-                throw error;
-            } else if (typedError.name === cache.ReserveCacheError.name) {
-                core.info(typedError.message);
-            } else {
-                utils.logWarning(typedError.message);
-            }
+            utils.logWarning(typedError.message);
         }
     } catch (error: unknown) {
         utils.logWarning((error as Error).message);

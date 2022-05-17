@@ -12,19 +12,20 @@ export function setInput(name: string, value: string): void {
 interface CacheInput {
     path: string;
     key: string;
-    restoreKeys?: string[];
+    connectionString?: string;
+    container?: string;
 }
 
 export function setInputs(input: CacheInput): void {
     setInput(Inputs.Path, input.path);
     setInput(Inputs.Key, input.key);
-    input.restoreKeys &&
-        setInput(Inputs.RestoreKeys, input.restoreKeys.join("\n"));
+    setInput(Inputs.ConnectionString, input.connectionString || "");
+    setInput(Inputs.Container, input.container || "");
 }
 
 export function clearInputs(): void {
     delete process.env[getInputName(Inputs.Path)];
     delete process.env[getInputName(Inputs.Key)];
-    delete process.env[getInputName(Inputs.RestoreKeys)];
-    delete process.env[getInputName(Inputs.UploadChunkSize)];
+    delete process.env[getInputName(Inputs.ConnectionString)];
+    delete process.env[getInputName(Inputs.Container)];
 }

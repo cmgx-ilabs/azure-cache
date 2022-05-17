@@ -1,8 +1,8 @@
 export enum Inputs {
     Key = "key",
     Path = "path",
-    RestoreKeys = "restore-keys",
-    UploadChunkSize = "upload-chunk-size"
+    ConnectionString = "connection-string",
+    Container = "container"
 }
 
 export enum Outputs {
@@ -10,8 +10,8 @@ export enum Outputs {
 }
 
 export enum State {
-    CachePrimaryKey = "CACHE_KEY",
-    CacheMatchedKey = "CACHE_RESULT"
+    CacheHit = "CACHE_HIT",
+    CachePrimaryKey = "PRIMARY_KEY"
 }
 
 export enum Events {

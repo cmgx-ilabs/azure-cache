@@ -23,12 +23,15 @@
   "author": "GitHub",
   "license": "MIT",
   "dependencies": {
-    "@actions/cache": "^2.0.2",
     "@actions/core": "^1.7.0",
     "@actions/exec": "^1.1.1",
-    "@actions/io": "^1.1.2"
+    "@actions/io": "^1.1.2",
+    "@azure/storage-blob": "^12.10.0",
+    "execa": "^6.1.0",
+    "globby": "^13.1.1"
   },
   "devDependencies": {
+    "@types/execa": "^2.0.0",
     "@types/jest": "^27.5.0",
     "@types/nock": "^11.1.0",
     "@types/node": "^16.11.33",

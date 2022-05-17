@@ -1,4 +1,3 @@
-import * as cache from "@actions/cache";
 import * as core from "@actions/core";
 
 import { Events, Outputs, RefKey, State } from "../src/constants";
@@ -6,7 +5,6 @@ import * as actionUtils from "../src/utils/actionUtils";
 import * as testUtils from "../src/utils/testUtils";
 
 jest.mock("@actions/core");
-jest.mock("@actions/cache");
 
 beforeAll(() => {
     jest.spyOn(core, "getInput").mockImplementation((name, options) => {
@@ -19,140 +17,55 @@ afterEach(() => {
     delete process.env[RefKey];
 });
 
-test("isGhes returns true if server url is not github.com", () => {
-    try {
-        process.env["GITHUB_SERVER_URL"] = "http://example.com";
-        expect(actionUtils.isGhes()).toBe(true);
-    } finally {
-        process.env["GITHUB_SERVER_URL"] = undefined;
-    }
-});
-
-test("isGhes returns false when server url is github.com", () => {
-    try {
-        process.env["GITHUB_SERVER_URL"] = "http://github.com";
-        expect(actionUtils.isGhes()).toBe(false);
-    } finally {
-        process.env["GITHUB_SERVER_URL"] = undefined;
-    }
-});
-
-test("isExactKeyMatch with undefined cache key returns false", () => {
-    const key = "linux-rust";
-    const cacheKey = undefined;
-
-    expect(actionUtils.isExactKeyMatch(key, cacheKey)).toBe(false);
-});
-
-test("isExactKeyMatch with empty cache key returns false", () => {
-    const key = "linux-rust";
-    const cacheKey = "";
-
-    expect(actionUtils.isExactKeyMatch(key, cacheKey)).toBe(false);
-});
-
-test("isExactKeyMatch with different keys returns false", () => {
-    const key = "linux-rust";
-    const cacheKey = "linux-";
-
-    expect(actionUtils.isExactKeyMatch(key, cacheKey)).toBe(false);
-});
-
-test("isExactKeyMatch with different key accents returns false", () => {
-    const key = "linux-áccent";
-    const cacheKey = "linux-accent";
-
-    expect(actionUtils.isExactKeyMatch(key, cacheKey)).toBe(false);
-});
-
-test("isExactKeyMatch with same key returns true", () => {
-    const key = "linux-rust";
-    const cacheKey = "linux-rust";
-
-    expect(actionUtils.isExactKeyMatch(key, cacheKey)).toBe(true);
-});
-
-test("isExactKeyMatch with same key and different casing returns true", () => {
-    const key = "linux-rust";
-    const cacheKey = "LINUX-RUST";
-
-    expect(actionUtils.isExactKeyMatch(key, cacheKey)).toBe(true);
-});
-
-test("setOutputAndState with undefined entry to set cache-hit output", () => {
-    const key = "linux-rust";
-    const cacheKey = undefined;
-
+test("setCacheHit with true", () => {
     const setOutputMock = jest.spyOn(core, "setOutput");
     const saveStateMock = jest.spyOn(core, "saveState");
 
-    actionUtils.setOutputAndState(key, cacheKey);
-
-    expect(setOutputMock).toHaveBeenCalledWith(Outputs.CacheHit, "false");
-    expect(setOutputMock).toHaveBeenCalledTimes(1);
-
-    expect(saveStateMock).toHaveBeenCalledTimes(0);
-});
-
-test("setOutputAndState with exact match to set cache-hit output and state", () => {
-    const key = "linux-rust";
-    const cacheKey = "linux-rust";
-
-    const setOutputMock = jest.spyOn(core, "setOutput");
-    const saveStateMock = jest.spyOn(core, "saveState");
-
-    actionUtils.setOutputAndState(key, cacheKey);
+    actionUtils.setCacheHit(true);
 
     expect(setOutputMock).toHaveBeenCalledWith(Outputs.CacheHit, "true");
     expect(setOutputMock).toHaveBeenCalledTimes(1);
-
-    expect(saveStateMock).toHaveBeenCalledWith(State.CacheMatchedKey, cacheKey);
+    expect(saveStateMock).toHaveBeenCalledWith(State.CacheHit, "true");
     expect(saveStateMock).toHaveBeenCalledTimes(1);
 });
 
-test("setOutputAndState with no exact match to set cache-hit output and state", () => {
-    const key = "linux-rust";
-    const cacheKey = "linux-rust-bb828da54c148048dd17899ba9fda624811cfb43";
-
+test("setCacheHit with false", () => {
     const setOutputMock = jest.spyOn(core, "setOutput");
     const saveStateMock = jest.spyOn(core, "saveState");
 
-    actionUtils.setOutputAndState(key, cacheKey);
+    actionUtils.setCacheHit(false);
 
     expect(setOutputMock).toHaveBeenCalledWith(Outputs.CacheHit, "false");
     expect(setOutputMock).toHaveBeenCalledTimes(1);
-
-    expect(saveStateMock).toHaveBeenCalledWith(State.CacheMatchedKey, cacheKey);
+    expect(saveStateMock).toHaveBeenCalledWith(State.CacheHit, "false");
     expect(saveStateMock).toHaveBeenCalledTimes(1);
 });
 
-test("getCacheState with no state returns undefined", () => {
+test("getCacheHit with hit", () => {
     const getStateMock = jest.spyOn(core, "getState");
     getStateMock.mockImplementation(() => {
-        return "";
+        return "true";
     });
 
-    const state = actionUtils.getCacheState();
+    const state = actionUtils.getCacheHit();
 
-    expect(state).toBe(undefined);
+    expect(state).toEqual(true);
 
-    expect(getStateMock).toHaveBeenCalledWith(State.CacheMatchedKey);
+    expect(getStateMock).toHaveBeenCalledWith(State.CacheHit);
     expect(getStateMock).toHaveBeenCalledTimes(1);
 });
 
-test("getCacheState with valid state", () => {
-    const cacheKey = "Linux-node-bb828da54c148048dd17899ba9fda624811cfb43";
-
+test("getCacheHit with no hit", () => {
     const getStateMock = jest.spyOn(core, "getState");
     getStateMock.mockImplementation(() => {
-        return cacheKey;
+        return "false";
     });
 
-    const state = actionUtils.getCacheState();
+    const state = actionUtils.getCacheHit();
 
-    expect(state).toEqual(cacheKey);
+    expect(state).toEqual(false);
 
-    expect(getStateMock).toHaveBeenCalledWith(State.CacheMatchedKey);
+    expect(getStateMock).toHaveBeenCalledWith(State.CacheHit);
     expect(getStateMock).toHaveBeenCalledTimes(1);
 });
 
@@ -233,42 +146,4 @@ test("getInputAsInt throws if required and value missing", () => {
     expect(() =>
         actionUtils.getInputAsInt("undefined", { required: true })
     ).toThrowError();
-});
-
-test("isCacheFeatureAvailable for ac enabled", () => {
-    jest.spyOn(cache, "isFeatureAvailable").mockImplementation(() => true);
-
-    expect(actionUtils.isCacheFeatureAvailable()).toBe(true);
-});
-
-test("isCacheFeatureAvailable for ac disabled on GHES", () => {
-    jest.spyOn(cache, "isFeatureAvailable").mockImplementation(() => false);
-
-    const message =
-        "Cache action is only supported on GHES version >= 3.5. If you are on version >=3.5 Please check with GHES admin if Actions cache service is enabled or not.";
-    const infoMock = jest.spyOn(core, "info");
-
-    try {
-        process.env["GITHUB_SERVER_URL"] = "http://example.com";
-        expect(actionUtils.isCacheFeatureAvailable()).toBe(false);
-        expect(infoMock).toHaveBeenCalledWith(`[warning]${message}`);
-    } finally {
-        delete process.env["GITHUB_SERVER_URL"];
-    }
-});
-
-test("isCacheFeatureAvailable for ac disabled on dotcom", () => {
-    jest.spyOn(cache, "isFeatureAvailable").mockImplementation(() => false);
-
-    const message =
-        "An internal error has occurred in cache backend. Please check https://www.githubstatus.com/ for any ongoing issue in actions.";
-    const infoMock = jest.spyOn(core, "info");
-
-    try {
-        process.env["GITHUB_SERVER_URL"] = "http://github.com";
-        expect(actionUtils.isCacheFeatureAvailable()).toBe(false);
-        expect(infoMock).toHaveBeenCalledWith(`[warning]${message}`);
-    } finally {
-        delete process.env["GITHUB_SERVER_URL"];
-    }
 });
