@@ -2,6 +2,7 @@ import * as core from "@actions/core";
 import { ContainerClient } from "@azure/storage-blob";
 import { execa } from "execa";
 import tar from "tar";
+import zlib from "zlib";
 
 import { Inputs, Outputs, RefKey, State } from "../constants";
 
@@ -101,26 +102,17 @@ export async function storeCache(
     
     core.debug(`Starting compression with primary key: ${key}`);
 
-    const gzip = execa("gzip", [ "-" ], {
-        stderr: "inherit"
-    });
-
-    if (gzip.stdin === null || gzip.stdout === null) {
-        throw new Error("Compression failed.");
-    }
+    const gzip = zlib.createBrotliCompress();
 
     tar.c({
         cwd: '/'
-    }, files).pipe(gzip.stdin);
+    }, files).pipe(gzip);
 
     core.debug(`Starting upload with primary key: ${key}`);
-    let [uploadResult, _] = await Promise.all([blob.uploadStream(gzip.stdout), gzip]);
+    let uploadResult = await blob.uploadStream(gzip);
 
     if (uploadResult.errorCode) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
-    }
-    if (gzip.exitCode !== 0) {
-        throw new Error(`gzip exited with ${gzip.exitCode}`);
     }
 
     core.debug(`Upload completed, marking as valid: ${key}`);
