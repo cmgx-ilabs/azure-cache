@@ -36499,7 +36499,7 @@ exports.unpackCache = unpackCache;
 function storeCache(container, key, files) {
     return __awaiter(this, void 0, void 0, function* () {
         core.debug(`Starting compression with primary key: ${key}`);
-        const tar = (0, execa_1.execa)("tar", ["-cf", "--zstd", ...files]);
+        const tar = (0, execa_1.execa)("tar", ["-czf", "--zstd", ...files]);
         if (tar.stdout === null) {
             throw new Error((yield tar).stderr.toString());
         }
@@ -36520,18 +36520,24 @@ function storeCache(container, key, files) {
 exports.storeCache = storeCache;
 function getContainerClient() {
     return __awaiter(this, void 0, void 0, function* () {
-        const connectionString = core.getInput(constants_1.Inputs.ConnectionString, {
-            required: true
-        });
-        const containerName = core.getInput(constants_1.Inputs.ConnectionString, {
-            required: true
-        });
-        const client = storage_blob_1.BlobServiceClient.fromConnectionString(connectionString);
-        const container = client.getContainerClient(containerName);
-        if (!(yield container.exists())) {
-            throw new Error(`Container '${containerName}' does not exist.`);
+        try {
+            const connectionString = core.getInput(constants_1.Inputs.ConnectionString, {
+                required: true
+            });
+            const containerName = core.getInput(constants_1.Inputs.ConnectionString, {
+                required: true
+            });
+            core.info(`Connecting to storage account container: ${containerName}`);
+            const container = new storage_blob_1.ContainerClient(connectionString, containerName);
+            if (!(yield container.exists())) {
+                throw new Error(`Container '${containerName}' does not exist.`);
+            }
+            return container;
         }
-        return container;
+        catch (e) {
+            const m = e;
+            throw new Error(`Unable to connect to container: ${m.message}`);
+        }
     });
 }
 exports.getContainerClient = getContainerClient;
