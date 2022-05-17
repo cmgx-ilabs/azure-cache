@@ -71,26 +71,9 @@ export async function unpackCache(
     }
     const body = downloadResult.readableStreamBody;
 
-    const gzip = zlib.createGunzip({
-        flush: zlib.constants.Z_SYNC_FLUSH
-    });
-    body.pipe(gzip);
-
-    const tar = execa("tar", ["-x"], {
-        stderr: "inherit"
-    });
-    if (tar.stdin === null) {
-        throw new Error("Decompression failed.");
-    }
-    gzip.pipe(tar.stdin);
-    await new Promise((resolve, reject) => {
-        body.on("error", reject);
-        body.on("end", resolve);
-    });
-    await tar;
-    if (tar.exitCode !== 0) {
-        throw new Error(`tar exited with ${tar.exitCode}`);
-    }
+    body.pipe(tar.x({
+        C: process.cwd()
+    }));
 
     return true;
 }
@@ -107,14 +90,12 @@ export async function storeCache(
     
     core.debug(`Starting compression with primary key: ${key}`);
 
-    const gzip = zlib.createGzip({
-        flush: zlib.constants.Z_SYNC_FLUSH
-    });
-
-    tar.c({}, files).pipe(gzip);
+    const tarFile = tar.c({
+        z: true
+    }, files);
 
     core.debug(`Starting upload with primary key: ${key}`);
-    let uploadResult = await blob.uploadStream(gzip);
+    let uploadResult = await blob.uploadStream(tarFile);
 
     if (uploadResult.errorCode) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
