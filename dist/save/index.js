@@ -69147,7 +69147,7 @@ async function unpackCache(container, key) {
         throw new Error(`This is somehow running in a browser.`);
     }
     const body = downloadResult.readableStreamBody;
-    const tar = (0, execa_1.execa)("tar", ["-x", "--zstd", "-C", "/"], {
+    const tar = (0, execa_1.execa)("tar", ["-xz", "-C", "/"], {
         stderr: "inherit"
     });
     if (tar.stdin === null) {
@@ -69170,22 +69170,22 @@ async function storeCache(container, key, files) {
     const blob = container.getBlockBlobClient(key);
     await blob.deleteIfExists();
     core.debug(`Starting compression with primary key: ${key}`);
-    const zstd = (0, execa_1.execa)("zstd", ["-"], {
+    const gzip = (0, execa_1.execa)("gzip", ["-"], {
         stderr: "inherit"
     });
-    if (zstd.stdin === null || zstd.stdout === null) {
+    if (gzip.stdin === null || gzip.stdout === null) {
         throw new Error("Compression failed.");
     }
     tar_1.default.c({
         cwd: '/'
-    }, files).pipe(zstd.stdin);
+    }, files).pipe(gzip.stdin);
     core.debug(`Starting upload with primary key: ${key}`);
-    let [uploadResult, _] = await Promise.all([blob.uploadStream(zstd.stdout), zstd]);
+    let [uploadResult, _] = await Promise.all([blob.uploadStream(gzip.stdout), gzip]);
     if (uploadResult.errorCode) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
     }
-    if (zstd.exitCode !== 0) {
-        throw new Error(`zstd exited with ${zstd.exitCode}`);
+    if (gzip.exitCode !== 0) {
+        throw new Error(`gzip exited with ${gzip.exitCode}`);
     }
     core.debug(`Upload completed, marking as valid: ${key}`);
     await blob.setMetadata({
