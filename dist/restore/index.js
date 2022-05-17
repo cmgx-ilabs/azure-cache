@@ -61222,7 +61222,10 @@ async function run() {
         }
         const primaryKey = core.getInput(constants_1.Inputs.Key, { required: true });
         core.saveState(constants_1.State.CachePrimaryKey, primaryKey);
-        const failOnMiss = core.getInput(constants_1.Inputs.FailOnMiss, { required: false }) === "true";
+        const failOnMiss = core.getBooleanInput(constants_1.Inputs.FailOnMiss, { required: false });
+        if (!failOnMiss) {
+            core.getInput(constants_1.Inputs.Path, { required: true });
+        }
         const container = await utils.getContainerClient();
         let hit = false;
         try {

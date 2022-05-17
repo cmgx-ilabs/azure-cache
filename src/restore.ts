@@ -18,7 +18,10 @@ async function run(): Promise<void> {
         const primaryKey = core.getInput(Inputs.Key, { required: true });
         core.saveState(State.CachePrimaryKey, primaryKey);
 
-        const failOnMiss = core.getInput(Inputs.FailOnMiss, { required: false }) === "true";
+        const failOnMiss = core.getBooleanInput(Inputs.FailOnMiss, { required: false });
+        if (!failOnMiss) {
+            core.getInput(Inputs.Path, { required: true });
+        }
 
         const container = await utils.getContainerClient();
         let hit = false;
