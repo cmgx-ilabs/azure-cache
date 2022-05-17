@@ -28,10 +28,11 @@
     "@actions/io": "^1.1.2",
     "@azure/storage-blob": "^12.10.0",
     "execa": "^6.1.0",
-    "globby": "^13.1.1"
+    "glob": "^8.0.3"
   },
   "devDependencies": {
     "@types/execa": "^2.0.0",
+    "@types/glob": "^7.2.0",
     "@types/jest": "^27.5.0",
     "@types/nock": "^11.1.0",
     "@types/node": "^16.11.33",
