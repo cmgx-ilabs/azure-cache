@@ -115,7 +115,7 @@ export async function getContainerClient(): Promise<ContainerClient> {
             required: true
         });
 
-        const containerName = core.getInput(Inputs.ConnectionString, {
+        const containerName = core.getInput(Inputs.Container, {
             required: true
         });
 

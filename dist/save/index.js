@@ -36524,7 +36524,7 @@ function getContainerClient() {
             const connectionString = core.getInput(constants_1.Inputs.ConnectionString, {
                 required: true
             });
-            const containerName = core.getInput(constants_1.Inputs.ConnectionString, {
+            const containerName = core.getInput(constants_1.Inputs.Container, {
                 required: true
             });
             core.info(`Connecting to storage account container: ${containerName}`);
