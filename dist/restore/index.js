@@ -1,4 +1,4 @@
-/******/ (() => { // webpackBootstrap
+require('./sourcemap-register.js');/******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
 /***/ 7351:
@@ -54694,7 +54694,8 @@ function storeCache(container, key, files) {
     return __awaiter(this, void 0, void 0, function* () {
         core.debug(`Starting compression with primary key: ${key}`);
         const tar = (0, execa_1.execa)("tar", ["-czf", "--zstd", ...files], {
-            stderr: "inherit"
+            stderr: "inherit",
+            shell: true
         });
         if (tar.stdout === null) {
             throw new Error("Compression failed.");
@@ -54703,11 +54704,10 @@ function storeCache(container, key, files) {
         const blob = container.getBlockBlobClient(key);
         yield blob.deleteIfExists();
         core.debug(`Starting upload with primary key: ${key}`);
-        const uploadResult = yield blob.uploadStream(tar.stdout);
+        let [uploadResult, _] = yield Promise.all([blob.uploadStream(tar.stdout), tar]);
         if (uploadResult.errorCode !== null) {
             throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
         }
-        yield tar;
         if (tar.exitCode !== 0) {
             throw new Error(`tar exited with ${tar.exitCode}`);
         }
@@ -56346,3 +56346,4 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /******/ 	
 /******/ })()
 ;
+//# sourceMappingURL=index.js.map

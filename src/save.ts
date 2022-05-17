@@ -38,23 +38,10 @@ async function run(): Promise<void> {
             required: true
         });
 
-        const files = await new Promise<string[]>((resolve, reject) => {
-            const joined = cachePaths.join("|");
-            glob(`(${joined})`, {
-                dot: true,
-                nonull: false,
-                absolute: true
-            }, (err, matches) => {
-                if (err) reject(err);
-                resolve(matches);
-            })
-        });
-
         const container = await utils.getContainerClient();
-        core.info(`Caching ${primaryKey} with ${files.length} files`);
 
         try {
-            await utils.storeCache(container, primaryKey, files);
+            await utils.storeCache(container, primaryKey, cachePaths);
             core.info(`Cache saved with key: ${primaryKey}`);
         } catch (error: unknown) {
             const typedError = error as Error;

@@ -94,7 +94,8 @@ export async function storeCache(
 ): Promise<void> {
     core.debug(`Starting compression with primary key: ${key}`);
     const tar = execa("tar", ["-czf", "--zstd", ...files], {
-        stderr: "inherit"
+        stderr: "inherit",
+        shell: true
     });
     if (tar.stdout === null) {
         throw new Error("Compression failed.");
@@ -105,11 +106,11 @@ export async function storeCache(
     await blob.deleteIfExists();
 
     core.debug(`Starting upload with primary key: ${key}`);
-    const uploadResult = await blob.uploadStream(tar.stdout);
+    let [uploadResult, _] = await Promise.all([blob.uploadStream(tar.stdout), tar]);
+
     if (uploadResult.errorCode !== null) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
     }
-    await tar;
     if (tar.exitCode !== 0) {
         throw new Error(`tar exited with ${tar.exitCode}`);
     }
