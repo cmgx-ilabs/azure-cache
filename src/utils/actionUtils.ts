@@ -1,6 +1,7 @@
 import * as core from "@actions/core";
-import { BlobServiceClient, ContainerClient } from "@azure/storage-blob";
+import { ContainerClient } from "@azure/storage-blob";
 import { execa } from "execa";
+import tar from "tar";
 
 import { Inputs, Outputs, RefKey, State } from "../constants";
 
@@ -92,27 +93,33 @@ export async function storeCache(
     key: string,
     files: string[]
 ): Promise<void> {
-    core.debug(`Starting compression with primary key: ${key}`);
-    const tar = execa("tar", ["-cz", "--zstd", ...files], {
-        stderr: "inherit",
-        shell: true
-    });
-    if (tar.stdout === null) {
-        throw new Error("Compression failed.");
-    }
 
     core.debug(`Connecting to blob with key: ${key}`);
     const blob = container.getBlockBlobClient(key);
     await blob.deleteIfExists();
+    
+    core.debug(`Starting compression with primary key: ${key}`);
+
+    const zstd = execa("zstd", [ "-" ], {
+        stderr: "inherit"
+    });
+
+    if (zstd.stdin === null || zstd.stdout === null) {
+        throw new Error("Compression failed.");
+    }
+
+    tar.c({
+        cwd: '/'
+    }, files).pipe(zstd.stdin);
 
     core.debug(`Starting upload with primary key: ${key}`);
-    let [uploadResult, _] = await Promise.all([blob.uploadStream(tar.stdout), tar]);
+    let [uploadResult, _] = await Promise.all([blob.uploadStream(zstd.stdout), zstd]);
 
     if (uploadResult.errorCode !== null) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
     }
-    if (tar.exitCode !== 0) {
-        throw new Error(`tar exited with ${tar.exitCode}`);
+    if (zstd.exitCode !== 0) {
+        throw new Error(`zstd exited with ${zstd.exitCode}`);
     }
 
     core.debug(`Upload completed, marking as valid: ${key}`);
