@@ -2,7 +2,8 @@ export enum Inputs {
     Key = "key",
     Path = "path",
     ConnectionString = "connection-string",
-    Container = "container"
+    Container = "container",
+    FailOnMiss = "fail-on-miss",
 }
 
 export enum Outputs {

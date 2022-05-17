@@ -68942,6 +68942,7 @@ var Inputs;
     Inputs["Path"] = "path";
     Inputs["ConnectionString"] = "connection-string";
     Inputs["Container"] = "container";
+    Inputs["FailOnMiss"] = "fail-on-miss";
 })(Inputs = exports.Inputs || (exports.Inputs = {}));
 var Outputs;
 (function (Outputs) {

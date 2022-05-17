@@ -18,22 +18,23 @@ async function run(): Promise<void> {
         const primaryKey = core.getInput(Inputs.Key, { required: true });
         core.saveState(State.CachePrimaryKey, primaryKey);
 
+        const failOnMiss = core.getInput(Inputs.FailOnMiss, { required: false }) === "true";
+
         const container = await utils.getContainerClient();
+        let hit = false;
 
         try {
-            const cacheKey = await utils.unpackCache(container, primaryKey);
-            if (!cacheKey) {
-                core.info(`Cache not found for input keys: ${primaryKey}`);
-                return;
-            }
-
-            utils.setCacheHit(true);
-            core.info(`Cache restored from key: ${cacheKey}`);
+            hit = await utils.unpackCache(container, primaryKey);
         } catch (error: unknown) {
             const typedError = error as Error;
             utils.logWarning(typedError.message);
-            utils.setCacheHit(false);
         }
+
+        if (hit) core.info(`Cache not found for input keys: ${primaryKey}`);
+        else if (failOnMiss) core.setFailed(`Cache hit required and was not found for key: ${primaryKey}`);
+        else core.info(`Cache restored from key: ${primaryKey}`);
+        
+        utils.setCacheHit(hit);
     } catch (error: unknown) {
         core.setFailed((error as Error).message);
     }

@@ -14,6 +14,9 @@ inputs:
   container:
     description: 'The storage account container'
     required: true
+  fail-on-miss:
+    description: 'Whether to fail the step when the cache misses'
+    required: false
 outputs:
   cache-hit:
     description: 'A boolean value to indicate an exact match was found for the primary key'

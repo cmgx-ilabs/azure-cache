@@ -61159,6 +61159,7 @@ var Inputs;
     Inputs["Path"] = "path";
     Inputs["ConnectionString"] = "connection-string";
     Inputs["Container"] = "container";
+    Inputs["FailOnMiss"] = "fail-on-miss";
 })(Inputs = exports.Inputs || (exports.Inputs = {}));
 var Outputs;
 (function (Outputs) {
@@ -61221,21 +61222,23 @@ async function run() {
         }
         const primaryKey = core.getInput(constants_1.Inputs.Key, { required: true });
         core.saveState(constants_1.State.CachePrimaryKey, primaryKey);
+        const failOnMiss = core.getInput(constants_1.Inputs.FailOnMiss, { required: false }) === "true";
         const container = await utils.getContainerClient();
+        let hit = false;
         try {
-            const cacheKey = await utils.unpackCache(container, primaryKey);
-            if (!cacheKey) {
-                core.info(`Cache not found for input keys: ${primaryKey}`);
-                return;
-            }
-            utils.setCacheHit(true);
-            core.info(`Cache restored from key: ${cacheKey}`);
+            hit = await utils.unpackCache(container, primaryKey);
         }
         catch (error) {
             const typedError = error;
             utils.logWarning(typedError.message);
-            utils.setCacheHit(false);
         }
+        if (hit)
+            core.info(`Cache not found for input keys: ${primaryKey}`);
+        else if (failOnMiss)
+            core.setFailed(`Cache hit required and was not found for key: ${primaryKey}`);
+        else
+            core.info(`Cache restored from key: ${primaryKey}`);
+        utils.setCacheHit(hit);
     }
     catch (error) {
         core.setFailed(error.message);
