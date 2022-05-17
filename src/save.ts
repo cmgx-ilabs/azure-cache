@@ -39,20 +39,9 @@ async function run(): Promise<void> {
             required: true
         });
 
-        cachePaths = cachePaths.map(x => {
-            if (x.startsWith("~/")) {
-                return utils.expand(`$HOME${x.substring(1)}`)
-            }
-            x = utils.expand(x);
-            if (!x.startsWith("/")) {
-                x = join(process.cwd(), x);
-            }
-            return x;
-        })
+        cachePaths = cachePaths.map(utils.expand)
 
-        const files = await globby(cachePaths, {
-            cwd: "/"
-        });
+        const files = await globby(cachePaths);
 
         const container = await utils.getContainerClient();
         core.info(`Caching ${primaryKey} with ${files.length} files`);

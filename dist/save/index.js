@@ -68995,7 +68995,6 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const core = __importStar(__nccwpck_require__(2186));
 const globby_1 = __nccwpck_require__(3680);
-const path_1 = __nccwpck_require__(1017);
 const constants_1 = __nccwpck_require__(9042);
 const utils = __importStar(__nccwpck_require__(6850));
 // Catch and log any unhandled exceptions.  These exceptions can leak out of the uploadChunk method in
@@ -69021,19 +69020,8 @@ async function run() {
         let cachePaths = utils.getInputAsArray(constants_1.Inputs.Path, {
             required: true
         });
-        cachePaths = cachePaths.map(x => {
-            if (x.startsWith("~/")) {
-                return utils.expand(`$HOME${x.substring(1)}`);
-            }
-            x = utils.expand(x);
-            if (!x.startsWith("/")) {
-                x = (0, path_1.join)(process.cwd(), x);
-            }
-            return x;
-        });
-        const files = await (0, globby_1.globby)(cachePaths, {
-            cwd: "/"
-        });
+        cachePaths = cachePaths.map(utils.expand);
+        const files = await (0, globby_1.globby)(cachePaths);
         const container = await utils.getContainerClient();
         core.info(`Caching ${primaryKey} with ${files.length} files`);
         try {
@@ -69152,7 +69140,7 @@ async function unpackCache(container, key) {
         flush: zlib_1.default.constants.Z_SYNC_FLUSH
     });
     body.pipe(gzip);
-    const tar = (0, execa_1.execa)("tar", ["-x", "-C", "/"], {
+    const tar = (0, execa_1.execa)("tar", ["-x"], {
         stderr: "inherit"
     });
     if (tar.stdin === null) {

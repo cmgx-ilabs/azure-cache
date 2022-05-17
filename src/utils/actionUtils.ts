@@ -76,7 +76,7 @@ export async function unpackCache(
     });
     body.pipe(gzip);
 
-    const tar = execa("tar", ["-x", "-C", "/"], {
+    const tar = execa("tar", ["-x"], {
         stderr: "inherit"
     });
     if (tar.stdin === null) {

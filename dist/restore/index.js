@@ -61350,7 +61350,7 @@ async function unpackCache(container, key) {
         flush: zlib_1.default.constants.Z_SYNC_FLUSH
     });
     body.pipe(gzip);
-    const tar = (0, execa_1.execa)("tar", ["-x", "-C", "/"], {
+    const tar = (0, execa_1.execa)("tar", ["-x"], {
         stderr: "inherit"
     });
     if (tar.stdin === null) {
