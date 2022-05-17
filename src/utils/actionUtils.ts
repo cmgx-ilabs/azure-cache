@@ -72,7 +72,7 @@ export async function unpackCache(
     const body = downloadResult.readableStreamBody;
 
     const gzip = zlib.createBrotliDecompress({
-        flush: zlib.constants.Z_SYNC_FLUSH
+        flush: zlib.constants.BROTLI_OPERATION_FLUSH
     });
     body.pipe(gzip);
 
@@ -107,8 +107,8 @@ export async function storeCache(
     
     core.debug(`Starting compression with primary key: ${key}`);
 
-    const gzip = zlib.createGzip({
-        flush: zlib.constants.Z_SYNC_FLUSH
+    const gzip = zlib.createBrotliCompress({
+        flush: zlib.constants.BROTLI_OPERATION_FLUSH
     });
 
     tar.c({

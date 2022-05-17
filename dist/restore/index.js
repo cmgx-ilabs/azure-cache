@@ -61347,7 +61347,7 @@ async function unpackCache(container, key) {
     }
     const body = downloadResult.readableStreamBody;
     const gzip = zlib_1.default.createBrotliDecompress({
-        flush: zlib_1.default.constants.Z_SYNC_FLUSH
+        flush: zlib_1.default.constants.BROTLI_OPERATION_FLUSH
     });
     body.pipe(gzip);
     const tar = (0, execa_1.execa)("tar", ["-x", "-C", "/"], {
@@ -61373,8 +61373,8 @@ async function storeCache(container, key, files) {
     const blob = container.getBlockBlobClient(key);
     await blob.deleteIfExists();
     core.debug(`Starting compression with primary key: ${key}`);
-    const gzip = zlib_1.default.createGzip({
-        flush: zlib_1.default.constants.Z_SYNC_FLUSH
+    const gzip = zlib_1.default.createBrotliCompress({
+        flush: zlib_1.default.constants.BROTLI_OPERATION_FLUSH
     });
     tar_1.default.c({
         cwd: '/'
