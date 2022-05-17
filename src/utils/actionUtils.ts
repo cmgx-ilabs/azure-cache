@@ -61,8 +61,8 @@ export async function unpackCache(
     }
 
     const downloadResult = await blob.download();
-    if (downloadResult.errorCode !== null) {
-        throw new Error(`Failed to upload: ${downloadResult.errorCode}`);
+    if (downloadResult.errorCode) {
+        throw new Error(`Failed to download: ${downloadResult.errorCode}`);
     }
     if (typeof downloadResult.readableStreamBody === "undefined") {
         throw new Error(`This is somehow running in a browser.`);
@@ -115,7 +115,7 @@ export async function storeCache(
     core.debug(`Starting upload with primary key: ${key}`);
     let [uploadResult, _] = await Promise.all([blob.uploadStream(zstd.stdout), zstd]);
 
-    if (uploadResult.errorCode !== null) {
+    if (uploadResult.errorCode) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
     }
     if (zstd.exitCode !== 0) {
