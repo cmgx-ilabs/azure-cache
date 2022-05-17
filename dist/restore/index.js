@@ -54671,9 +54671,11 @@ function unpackCache(container, key) {
             throw new Error(`This is somehow running in a browser.`);
         }
         const body = downloadResult.readableStreamBody;
-        const tar = (0, execa_1.execa)("tar", ["-xzf", "-", "--zstd", "-C", "/"]);
+        const tar = (0, execa_1.execa)("tar", ["-xzf", "-", "--zstd", "-C", "/"], {
+            stderr: "inherit"
+        });
         if (tar.stdin === null) {
-            throw new Error((yield tar).stderr.toString());
+            throw new Error("Decompression failed.");
         }
         body.pipe(tar.stdin);
         yield new Promise((resolve, reject) => {
@@ -54681,6 +54683,9 @@ function unpackCache(container, key) {
             body.on("end", resolve);
         });
         yield tar;
+        if (tar.exitCode !== 0) {
+            throw new Error(`tar exited with ${tar.exitCode}`);
+        }
         return true;
     });
 }
@@ -54688,18 +54693,24 @@ exports.unpackCache = unpackCache;
 function storeCache(container, key, files) {
     return __awaiter(this, void 0, void 0, function* () {
         core.debug(`Starting compression with primary key: ${key}`);
-        const tar = (0, execa_1.execa)("tar", ["-czf", "--zstd", ...files]);
+        const tar = (0, execa_1.execa)("tar", ["-czf", "--zstd", ...files], {
+            stderr: "inherit"
+        });
         if (tar.stdout === null) {
-            throw new Error((yield tar).stderr.toString());
+            throw new Error("Compression failed.");
         }
-        core.debug(`Starting upload with primary key: ${key}`);
+        core.debug(`Connecting to blob with key: ${key}`);
         const blob = container.getBlockBlobClient(key);
         yield blob.deleteIfExists();
+        core.debug(`Starting upload with primary key: ${key}`);
         const uploadResult = yield blob.uploadStream(tar.stdout);
         if (uploadResult.errorCode !== null) {
             throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
         }
         yield tar;
+        if (tar.exitCode !== 0) {
+            throw new Error(`tar exited with ${tar.exitCode}`);
+        }
         core.debug(`Upload completed, marking as valid: ${key}`);
         yield blob.setMetadata({
             valid: "true"

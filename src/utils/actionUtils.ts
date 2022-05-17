@@ -68,9 +68,11 @@ export async function unpackCache(
     }
     const body = downloadResult.readableStreamBody;
 
-    const tar = execa("tar", ["-xzf", "-", "--zstd", "-C", "/"]);
+    const tar = execa("tar", ["-xzf", "-", "--zstd", "-C", "/"], {
+        stderr: "inherit"
+    });
     if (tar.stdin === null) {
-        throw new Error((await tar).stderr.toString());
+        throw new Error("Decompression failed.");
     }
     body.pipe(tar.stdin);
     await new Promise((resolve, reject) => {
@@ -78,6 +80,9 @@ export async function unpackCache(
         body.on("end", resolve);
     });
     await tar;
+    if (tar.exitCode !== 0) {
+        throw new Error(`tar exited with ${tar.exitCode}`);
+    }
 
     return true;
 }
@@ -88,20 +93,26 @@ export async function storeCache(
     files: string[]
 ): Promise<void> {
     core.debug(`Starting compression with primary key: ${key}`);
-    const tar = execa("tar", ["-czf", "--zstd", ...files]);
+    const tar = execa("tar", ["-czf", "--zstd", ...files], {
+        stderr: "inherit"
+    });
     if (tar.stdout === null) {
-        throw new Error((await tar).stderr.toString());
+        throw new Error("Compression failed.");
     }
 
-    core.debug(`Starting upload with primary key: ${key}`);
+    core.debug(`Connecting to blob with key: ${key}`);
     const blob = container.getBlockBlobClient(key);
     await blob.deleteIfExists();
-    const uploadResult = await blob.uploadStream(tar.stdout);
 
+    core.debug(`Starting upload with primary key: ${key}`);
+    const uploadResult = await blob.uploadStream(tar.stdout);
     if (uploadResult.errorCode !== null) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
     }
     await tar;
+    if (tar.exitCode !== 0) {
+        throw new Error(`tar exited with ${tar.exitCode}`);
+    }
 
     core.debug(`Upload completed, marking as valid: ${key}`);
     await blob.setMetadata({
