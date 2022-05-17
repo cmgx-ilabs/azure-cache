@@ -88,7 +88,7 @@ export async function storeCache(
     files: string[]
 ): Promise<void> {
     core.debug(`Starting compression with primary key: ${key}`);
-    const tar = execa("tar", ["-cf", "--zstd", ...files]);
+    const tar = execa("tar", ["-czf", "--zstd", ...files]);
     if (tar.stdout === null) {
         throw new Error((await tar).stderr.toString());
     }
