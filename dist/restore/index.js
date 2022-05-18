@@ -54683,7 +54683,7 @@ async function storeCache(container, key, files) {
     const blob = container.getBlockBlobClient(key);
     await blob.deleteIfExists();
     core.debug(`Starting compression with primary key: ${key}`);
-    const zstd = (0, execa_1.execa)("tar", ["--files-from=-", "-"], {
+    const zstd = (0, execa_1.execa)("tar", ["-c", "--files-from=-", "-"], {
         stderr: "inherit"
     });
     core.debug(`Starting upload with primary key: ${key}`);

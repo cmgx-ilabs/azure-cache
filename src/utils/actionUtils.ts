@@ -99,7 +99,7 @@ export async function storeCache(
 
     core.debug(`Starting compression with primary key: ${key}`);
 
-    const zstd = execa("tar", ["--files-from=-", "-"], {
+    const zstd = execa("tar", ["-c", "--files-from=-", "-"], {
         stderr: "inherit"
     });
 
