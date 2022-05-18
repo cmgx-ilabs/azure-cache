@@ -62472,7 +62472,7 @@ async function storeCache(container, key, files) {
     await blob.deleteIfExists();
     core.debug(`Starting compression with primary key: ${key}`);
     const tmp = (await (0, execa_1.execa)("mktemp")).stdout;
-    const zstd = (0, execa_1.execa)("tar", ["-c", "--files-from=-", tmp], {
+    const zstd = (0, execa_1.execa)("tar", ["-cf", "--files-from=-", tmp], {
         stderr: "inherit"
     });
     (_a = zstd.stdin) === null || _a === void 0 ? void 0 : _a.write(Buffer.from(files.join("\n"), "utf8"));

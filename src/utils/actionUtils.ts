@@ -102,7 +102,7 @@ export async function storeCache(
 
     const tmp = (await execa("mktemp")).stdout;
 
-    const zstd = execa("tar", ["-c", "--files-from=-", tmp], {
+    const zstd = execa("tar", ["-cf", "--files-from=-", tmp], {
         stderr: "inherit"
     });
 
