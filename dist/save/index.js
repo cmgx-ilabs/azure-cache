@@ -62392,6 +62392,7 @@ exports.expand = exports.getContainerClient = exports.storeCache = exports.unpac
 const core = __importStar(__nccwpck_require__(2186));
 const storage_blob_1 = __nccwpck_require__(4100);
 const execa_1 = __nccwpck_require__(3258);
+const fs_1 = __nccwpck_require__(7147);
 const constants_1 = __nccwpck_require__(9042);
 function setCacheHit(isCacheHit) {
     core.setOutput(constants_1.Outputs.CacheHit, isCacheHit.toString());
@@ -62466,19 +62467,18 @@ async function unpackCache(container, key) {
 }
 exports.unpackCache = unpackCache;
 async function storeCache(container, key, files) {
-    var _a, _b;
     core.debug(`Connecting to blob with key: ${key}`);
     const blob = container.getBlockBlobClient(key);
     await blob.deleteIfExists();
     core.debug(`Starting compression with primary key: ${key}`);
-    const tmp = (await (0, execa_1.execa)("mktemp")).stdout;
-    const zstd = (0, execa_1.execa)("tar", ["-cf", "--files-from=-", tmp], {
+    const to = (await (0, execa_1.execa)("mktemp")).stdout;
+    const from = (await (0, execa_1.execa)("mktemp")).stdout;
+    await fs_1.promises.writeFile(from, files.join("\n"));
+    const zstd = (0, execa_1.execa)("tar", ["-cf", `--files-from=${from}`, to], {
         stderr: "inherit"
     });
-    (_a = zstd.stdin) === null || _a === void 0 ? void 0 : _a.write(Buffer.from(files.join("\n"), "utf8"));
-    (_b = zstd.stdin) === null || _b === void 0 ? void 0 : _b.end();
     core.debug(`Starting upload with primary key: ${key}`);
-    const uploadResult = await blob.uploadFile(tmp);
+    const uploadResult = await blob.uploadFile(to);
     await zstd;
     if (zstd.exitCode != 0) {
         throw new Error(`zstd exited with ${zstd.exitCode}`);
