@@ -95,17 +95,20 @@ export async function storeCache(
 
     await promises.writeFile(from, files.join("\n"));
 
-    const zstd = execa("tar", ["-cf", to, `--files-from=${from}`], {
-        stderr: "inherit"
-    });
+    const zstd = await execa(
+        "tar",
+        ["-cf", to, `--files-from=${from}`, `--zstd`],
+        {
+            stderr: "inherit"
+        }
+    );
 
-    core.debug(`Starting upload with primary key: ${key}`);
-    const uploadResult = await blob.uploadFile(to);
-
-    await zstd;
     if (zstd.exitCode != 0) {
         throw new Error(`zstd exited with ${zstd.exitCode}`);
     }
+
+    core.debug(`Starting upload with primary key: ${key}`);
+    const uploadResult = await blob.uploadFile(to);
 
     if (uploadResult.errorCode) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);

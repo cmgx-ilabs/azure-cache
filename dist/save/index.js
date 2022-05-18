@@ -62462,15 +62462,14 @@ async function storeCache(container, key, files) {
     const to = (await (0, execa_1.execa)("mktemp")).stdout;
     const from = (await (0, execa_1.execa)("mktemp")).stdout;
     await fs_1.promises.writeFile(from, files.join("\n"));
-    const zstd = (0, execa_1.execa)("tar", ["-cf", to, `--files-from=${from}`], {
+    const zstd = await (0, execa_1.execa)("tar", ["-cf", to, `--files-from=${from}`, `--zstd`], {
         stderr: "inherit"
     });
-    core.debug(`Starting upload with primary key: ${key}`);
-    const uploadResult = await blob.uploadFile(to);
-    await zstd;
     if (zstd.exitCode != 0) {
         throw new Error(`zstd exited with ${zstd.exitCode}`);
     }
+    core.debug(`Starting upload with primary key: ${key}`);
+    const uploadResult = await blob.uploadFile(to);
     if (uploadResult.errorCode) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
     }
