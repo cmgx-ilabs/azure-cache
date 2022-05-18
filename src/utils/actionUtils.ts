@@ -1,6 +1,7 @@
 import * as core from "@actions/core";
 import { ContainerClient } from "@azure/storage-blob";
 import { execa } from "execa";
+import tmp from "temp";
 
 import { Inputs, Outputs, RefKey, State } from "../constants";
 
@@ -99,21 +100,22 @@ export async function storeCache(
 
     core.debug(`Starting compression with primary key: ${key}`);
 
-    const zstd = execa("tar", ["-c", "--files-from=-", "-"], {
+    const tmp = (await execa("mktemp")).stdout;
+
+    const zstd = execa("tar", ["-c", "--files-from=-", tmp], {
         stderr: "inherit"
     });
 
-    core.debug(`Starting upload with primary key: ${key}`);
-    const uploadResultTask = blob.uploadStream(zstd.stdout!);
-
     zstd.stdin?.write(Buffer.from(files.join("\n"), "utf8"));
     zstd.stdin?.end();
+
+    core.debug(`Starting upload with primary key: ${key}`);
+    const uploadResult = await blob.uploadFile(tmp);
 
     await zstd;
     if (zstd.exitCode != 0) {
         throw new Error(`zstd exited with ${zstd.exitCode}`);
     }
-    const uploadResult = await uploadResultTask;
 
     if (uploadResult.errorCode) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);

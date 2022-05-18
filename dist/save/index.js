@@ -62471,18 +62471,18 @@ async function storeCache(container, key, files) {
     const blob = container.getBlockBlobClient(key);
     await blob.deleteIfExists();
     core.debug(`Starting compression with primary key: ${key}`);
-    const zstd = (0, execa_1.execa)("tar", ["-c", "--files-from=-", "-"], {
+    const tmp = (await (0, execa_1.execa)("mktemp")).stdout;
+    const zstd = (0, execa_1.execa)("tar", ["-c", "--files-from=-", tmp], {
         stderr: "inherit"
     });
-    core.debug(`Starting upload with primary key: ${key}`);
-    const uploadResultTask = blob.uploadStream(zstd.stdout);
     (_a = zstd.stdin) === null || _a === void 0 ? void 0 : _a.write(Buffer.from(files.join("\n"), "utf8"));
     (_b = zstd.stdin) === null || _b === void 0 ? void 0 : _b.end();
+    core.debug(`Starting upload with primary key: ${key}`);
+    const uploadResult = await blob.uploadFile(tmp);
     await zstd;
     if (zstd.exitCode != 0) {
         throw new Error(`zstd exited with ${zstd.exitCode}`);
     }
-    const uploadResult = await uploadResultTask;
     if (uploadResult.errorCode) {
         throw new Error(`Failed to upload: ${uploadResult.errorCode}`);
     }
