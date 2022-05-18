@@ -61,28 +61,17 @@ export async function unpackCache(
         return false;
     }
 
+    const from = (await execa("mktemp")).stdout;
+
     core.info(`Downloading cache for: ${key}`);
-    const downloadResult = await blob.download();
+    const downloadResult = await blob.downloadToFile(from);
     if (downloadResult.errorCode) {
         throw new Error(`Failed to download: ${downloadResult.errorCode}`);
     }
-    if (typeof downloadResult.readableStreamBody === "undefined") {
-        throw new Error(`This is somehow running in a browser.`);
-    }
-    const body = downloadResult.readableStreamBody;
 
-    const tar = execa("tar", ["-x", "--zstd"], {
+    const tar = await execa("tar", ["-xf", from, "--zstd"], {
         stderr: "inherit"
     });
-    if (tar.stdin === null) {
-        throw new Error("Decompression failed.");
-    }
-    body.pipe(tar.stdin);
-    await new Promise((resolve, reject) => {
-        body.on("error", reject);
-        body.on("end", resolve);
-    });
-    await tar;
     if (tar.exitCode !== 0) {
         throw new Error(`tar exited with ${tar.exitCode}`);
     }
@@ -106,7 +95,7 @@ export async function storeCache(
 
     await promises.writeFile(from, files.join("\n"));
 
-    const zstd = execa("tar", ["-cf", `--files-from=${from}`, to], {
+    const zstd = execa("tar", ["-cf", to, `--files-from=${from}`], {
         stderr: "inherit"
     });
 

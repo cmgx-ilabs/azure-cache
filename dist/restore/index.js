@@ -54651,27 +54651,15 @@ async function unpackCache(container, key) {
     if (((_a = (await blob.getProperties()).metadata) === null || _a === void 0 ? void 0 : _a.valid) !== "true") {
         return false;
     }
+    const from = (await (0, execa_1.execa)("mktemp")).stdout;
     core.info(`Downloading cache for: ${key}`);
-    const downloadResult = await blob.download();
+    const downloadResult = await blob.downloadToFile(from);
     if (downloadResult.errorCode) {
         throw new Error(`Failed to download: ${downloadResult.errorCode}`);
     }
-    if (typeof downloadResult.readableStreamBody === "undefined") {
-        throw new Error(`This is somehow running in a browser.`);
-    }
-    const body = downloadResult.readableStreamBody;
-    const tar = (0, execa_1.execa)("tar", ["-x", "--zstd"], {
+    const tar = await (0, execa_1.execa)("tar", ["-xf", from, "--zstd"], {
         stderr: "inherit"
     });
-    if (tar.stdin === null) {
-        throw new Error("Decompression failed.");
-    }
-    body.pipe(tar.stdin);
-    await new Promise((resolve, reject) => {
-        body.on("error", reject);
-        body.on("end", resolve);
-    });
-    await tar;
     if (tar.exitCode !== 0) {
         throw new Error(`tar exited with ${tar.exitCode}`);
     }
@@ -54686,7 +54674,7 @@ async function storeCache(container, key, files) {
     const to = (await (0, execa_1.execa)("mktemp")).stdout;
     const from = (await (0, execa_1.execa)("mktemp")).stdout;
     await fs_1.promises.writeFile(from, files.join("\n"));
-    const zstd = (0, execa_1.execa)("tar", ["-cf", `--files-from=${from}`, to], {
+    const zstd = (0, execa_1.execa)("tar", ["-cf", to, `--files-from=${from}`], {
         stderr: "inherit"
     });
     core.debug(`Starting upload with primary key: ${key}`);
