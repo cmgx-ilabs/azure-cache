@@ -1,5 +1,6 @@
 import * as core from "@actions/core";
-import { ContainerClient } from "@azure/storage-blob";
+import { DefaultAzureCredential } from "@azure/identity";
+import { BlobServiceClient, ContainerClient } from "@azure/storage-blob";
 import { execa } from "execa";
 import { promises } from "fs";
 import tmp from "temp";
@@ -123,8 +124,12 @@ export async function storeCache(
 export async function getContainerClient(): Promise<ContainerClient> {
     try {
         const connectionString = core.getInput(Inputs.ConnectionString, {
-            required: true
+            required: false
         });
+
+        if (connectionString === "") {
+            return await getDefaultContainerClient();
+        }
 
         const containerName = core.getInput(Inputs.Container, {
             required: true
@@ -132,6 +137,33 @@ export async function getContainerClient(): Promise<ContainerClient> {
 
         core.info(`Connecting to storage account container: ${containerName}`);
         const container = new ContainerClient(connectionString, containerName);
+        if (!(await container.exists())) {
+            throw new Error(`Container '${containerName}' does not exist.`);
+        }
+
+        return container;
+    } catch (e: unknown) {
+        const m = e as Error;
+        throw new Error(`Unable to connect to container: ${m.message}`);
+    }
+}
+
+export async function getDefaultContainerClient(): Promise<ContainerClient> {
+    try {
+        const url = core.getInput(Inputs.Url, {
+            required: true
+        });
+
+        const containerName = core.getInput(Inputs.Container, {
+            required: true
+        });
+
+        const credential = new DefaultAzureCredential();
+
+        const blobServiceClient = new BlobServiceClient(url, credential);
+
+        core.info(`Connecting to storage account container: ${containerName}`);
+        const container = blobServiceClient.getContainerClient(containerName);
         if (!(await container.exists())) {
             throw new Error(`Container '${containerName}' does not exist.`);
         }

@@ -26,6 +26,7 @@
     "@actions/core": "^1.7.0",
     "@actions/exec": "^1.1.1",
     "@actions/io": "^1.1.2",
+    "@azure/identity": "^2.0.4",
     "@azure/storage-blob": "^12.10.0",
     "@types/temp": "^0.9.1",
     "execa": "^6.1.0",

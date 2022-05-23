@@ -4,6 +4,7 @@ export enum Inputs {
     ConnectionString = "connection-string",
     Container = "container",
     FailOnMiss = "fail-on-miss",
+    Url = "url"
 }
 
 export enum Outputs {

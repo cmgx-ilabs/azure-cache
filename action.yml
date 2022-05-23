@@ -10,7 +10,10 @@ inputs:
     required: true
   connection-string:
     description: 'The storage account connection string'
-    required: true
+    required: false
+  url:
+    description: 'The storage account url, used when `connection-string` is not provided'
+    required: false
   container:
     description: 'The storage account container'
     required: true
