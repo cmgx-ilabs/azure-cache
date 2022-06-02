@@ -3,7 +3,6 @@ import { DefaultAzureCredential } from "@azure/identity";
 import { BlobServiceClient, ContainerClient } from "@azure/storage-blob";
 import { execa } from "execa";
 import { promises } from "fs";
-import tmp from "temp";
 
 import { Inputs, Outputs, RefKey, State } from "../constants";
 
@@ -208,4 +207,25 @@ export function expand(envValue: string) {
 
         return newEnv.replace(replacePart, value);
     }, envValue);
+}
+
+export async function deleteAll(paths: string[]): Promise<void> {
+    for (const path of paths) {
+        try {
+            const stat = await promises.stat(path);
+            if (stat.isSymbolicLink()) {
+                await promises.unlink(path);
+            } else {
+                await promises.rm(path, {
+                    recursive: stat.isDirectory(),
+                    force: true
+                });
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (e: any) {
+            core.warning(
+                `Could not delete cached path ${path}: ${e?.message ?? e}`
+            );
+        }
+    }
 }

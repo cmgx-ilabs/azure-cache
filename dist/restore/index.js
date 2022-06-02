@@ -90518,7 +90518,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.expand = exports.getDefaultContainerClient = exports.getContainerClient = exports.storeCache = exports.unpackCache = exports.getInputAsInt = exports.getInputAsArray = exports.isValidEvent = exports.logWarning = exports.getCacheHit = exports.setCacheHit = void 0;
+exports.deleteAll = exports.expand = exports.getDefaultContainerClient = exports.getContainerClient = exports.storeCache = exports.unpackCache = exports.getInputAsInt = exports.getInputAsArray = exports.isValidEvent = exports.logWarning = exports.getCacheHit = exports.setCacheHit = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const identity_1 = __nccwpck_require__(3084);
 const storage_blob_1 = __nccwpck_require__(4100);
@@ -90688,6 +90688,28 @@ function expand(envValue) {
     }, envValue);
 }
 exports.expand = expand;
+async function deleteAll(paths) {
+    var _a;
+    for (const path of paths) {
+        try {
+            const stat = await fs_1.promises.stat(path);
+            if (stat.isSymbolicLink()) {
+                await fs_1.promises.unlink(path);
+            }
+            else {
+                await fs_1.promises.rm(path, {
+                    recursive: stat.isDirectory(),
+                    force: true
+                });
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        }
+        catch (e) {
+            core.warning(`Could not delete cached path ${path}: ${(_a = e === null || e === void 0 ? void 0 : e.message) !== null && _a !== void 0 ? _a : e}`);
+        }
+    }
+}
+exports.deleteAll = deleteAll;
 
 
 /***/ }),
