@@ -90518,7 +90518,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.deleteAll = exports.expand = exports.getDefaultContainerClient = exports.getContainerClient = exports.storeCache = exports.unpackCache = exports.getInputAsInt = exports.getInputAsArray = exports.isValidEvent = exports.logWarning = exports.getCacheHit = exports.setCacheHit = void 0;
+exports.expand = exports.getDefaultContainerClient = exports.getContainerClient = exports.storeCache = exports.unpackCache = exports.getInputAsInt = exports.getInputAsArray = exports.isValidEvent = exports.logWarning = exports.getCacheHit = exports.setCacheHit = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const identity_1 = __nccwpck_require__(3084);
 const storage_blob_1 = __nccwpck_require__(4100);
@@ -90571,16 +90571,32 @@ async function unpackCache(container, key) {
         return false;
     }
     const from = (await (0, execa_1.execa)("mktemp")).stdout;
-    core.info(`Downloading cache for: ${key}`);
-    const downloadResult = await blob.downloadToFile(from);
-    if (downloadResult.errorCode) {
-        throw new Error(`Failed to download: ${downloadResult.errorCode}`);
+    try {
+        core.info(`Downloading cache for: ${key}`);
+        const downloadResult = await blob.downloadToFile(from);
+        if (downloadResult.errorCode) {
+            throw new Error(`Failed to download: ${downloadResult.errorCode}`);
+        }
+        const tar = await (0, execa_1.execa)("tar", ["-xf", from, "--zstd"], {
+            stderr: "inherit"
+        });
+        if (tar.exitCode !== 0) {
+            throw new Error(`tar exited with ${tar.exitCode}`);
+        }
     }
-    const tar = await (0, execa_1.execa)("tar", ["-xf", from, "--zstd"], {
-        stderr: "inherit"
-    });
-    if (tar.exitCode !== 0) {
-        throw new Error(`tar exited with ${tar.exitCode}`);
+    finally {
+        for (let i = 1; i <= 10; i++) {
+            try {
+                await fs_1.promises.rm(from, {
+                    force: true
+                });
+                // eslint-disable-next-line no-empty
+            }
+            catch {
+                core.warning(`failed to delete delete temporary file (attempt ${i} of 10): ${from}`);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
     }
     return true;
 }
@@ -90688,28 +90704,6 @@ function expand(envValue) {
     }, envValue);
 }
 exports.expand = expand;
-async function deleteAll(paths) {
-    var _a;
-    for (const path of paths) {
-        try {
-            const stat = await fs_1.promises.stat(path);
-            if (stat.isSymbolicLink()) {
-                await fs_1.promises.unlink(path);
-            }
-            else {
-                await fs_1.promises.rm(path, {
-                    recursive: stat.isDirectory(),
-                    force: true
-                });
-            }
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        }
-        catch (e) {
-            core.warning(`Could not delete cached path ${path}: ${(_a = e === null || e === void 0 ? void 0 : e.message) !== null && _a !== void 0 ? _a : e}`);
-        }
-    }
-}
-exports.deleteAll = deleteAll;
 
 
 /***/ }),

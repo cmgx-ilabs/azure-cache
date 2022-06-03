@@ -39,7 +39,6 @@ async function run(): Promise<void> {
             core.info(
                 `Cache hit occurred on the primary key ${primaryKey}, not saving cache.`
             );
-            await utils.deleteAll(files);
             return;
         }
 
@@ -52,8 +51,6 @@ async function run(): Promise<void> {
         } catch (error: unknown) {
             const typedError = error as Error;
             utils.logWarning(typedError.message);
-        } finally {
-            await utils.deleteAll(files);
         }
     } catch (error: unknown) {
         utils.logWarning((error as Error).message);
