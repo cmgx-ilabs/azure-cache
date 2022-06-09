@@ -27,6 +27,13 @@ async function run(): Promise<void> {
             return;
         }
 
+        if (utils.getCacheHit()) {
+            core.info(
+                `Cache hit occurred on the primary key ${primaryKey}, not saving cache.`
+            );
+            return;
+        }
+
         let cachePaths = utils.getInputAsArray(Inputs.Path, {
             required: true
         });
@@ -34,13 +41,6 @@ async function run(): Promise<void> {
         cachePaths = cachePaths.map(utils.expand);
 
         const files = await globby(cachePaths);
-
-        if (utils.getCacheHit()) {
-            core.info(
-                `Cache hit occurred on the primary key ${primaryKey}, not saving cache.`
-            );
-            return;
-        }
 
         const container = await utils.getContainerClient();
         core.info(`Caching ${primaryKey} with ${files.length} files`);
