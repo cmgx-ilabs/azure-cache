@@ -182,7 +182,7 @@ export async function getDefaultContainerClient(): Promise<ContainerClient> {
 
         const options = {} as DefaultAzureCredentialOptions;
         if (clientId !== "") {
-            options.managedIdentityClientId = clientId;
+            options.managedIdentityClientId = expand(clientId);
         }
 
         const credential = new DefaultAzureCredential(options);

@@ -94,3 +94,6 @@ typings/
 
 # Text editor files
 .vscode/
+
+# No idea
+dist/*/xdg-open

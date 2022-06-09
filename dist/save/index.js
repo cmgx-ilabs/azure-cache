@@ -98452,7 +98452,7 @@ async function getDefaultContainerClient() {
         });
         const options = {};
         if (clientId !== "") {
-            options.managedIdentityClientId = clientId;
+            options.managedIdentityClientId = expand(clientId);
         }
         const credential = new identity_1.DefaultAzureCredential(options);
         const blobServiceClient = new storage_blob_1.BlobServiceClient(url, credential);
