@@ -98247,15 +98247,15 @@ async function run() {
             utils.logWarning(`Error retrieving key from state.`);
             return;
         }
+        if (utils.getCacheHit()) {
+            core.info(`Cache hit occurred on the primary key ${primaryKey}, not saving cache.`);
+            return;
+        }
         let cachePaths = utils.getInputAsArray(constants_1.Inputs.Path, {
             required: true
         });
         cachePaths = cachePaths.map(utils.expand);
         const files = await (0, globby_1.globby)(cachePaths);
-        if (utils.getCacheHit()) {
-            core.info(`Cache hit occurred on the primary key ${primaryKey}, not saving cache.`);
-            return;
-        }
         const container = await utils.getContainerClient();
         core.info(`Caching ${primaryKey} with ${files.length} files`);
         try {
