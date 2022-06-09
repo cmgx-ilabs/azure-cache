@@ -146,6 +146,7 @@ export async function getContainerClient(): Promise<ContainerClient> {
         });
 
         if (connectionString === "") {
+            core.debug("using default credential to access azure");
             return await getDefaultContainerClient();
         }
 
@@ -176,13 +177,14 @@ export async function getDefaultContainerClient(): Promise<ContainerClient> {
             required: true
         });
 
-        const clientId = core.getInput(Inputs.Container, {
+        const clientId = core.getInput(Inputs.ClientID, {
             required: false
         });
 
         const options = {} as DefaultAzureCredentialOptions;
         if (clientId !== "") {
             options.managedIdentityClientId = expand(clientId);
+            core.debug(`clientId: ${options.managedIdentityClientId}`);
         }
 
         const credential = new DefaultAzureCredential(options);

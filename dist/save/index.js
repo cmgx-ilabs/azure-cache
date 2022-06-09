@@ -98421,6 +98421,7 @@ async function getContainerClient() {
             required: false
         });
         if (connectionString === "") {
+            core.debug("using default credential to access azure");
             return await getDefaultContainerClient();
         }
         const containerName = core.getInput(constants_1.Inputs.Container, {
@@ -98447,12 +98448,13 @@ async function getDefaultContainerClient() {
         const containerName = core.getInput(constants_1.Inputs.Container, {
             required: true
         });
-        const clientId = core.getInput(constants_1.Inputs.Container, {
+        const clientId = core.getInput(constants_1.Inputs.ClientID, {
             required: false
         });
         const options = {};
         if (clientId !== "") {
             options.managedIdentityClientId = expand(clientId);
+            core.debug(`clientId: ${options.managedIdentityClientId}`);
         }
         const credential = new identity_1.DefaultAzureCredential(options);
         const blobServiceClient = new storage_blob_1.BlobServiceClient(url, credential);
