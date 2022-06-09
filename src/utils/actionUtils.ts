@@ -1,8 +1,11 @@
 import * as core from "@actions/core";
-import { DefaultAzureCredential } from "@azure/identity";
+import {
+    DefaultAzureCredential,
+    DefaultAzureCredentialOptions
+} from "@azure/identity";
 import { BlobServiceClient, ContainerClient } from "@azure/storage-blob";
 import { execa } from "execa";
-import { fstat, promises } from "fs";
+import { promises } from "fs";
 
 import { Inputs, Outputs, RefKey, State } from "../constants";
 
@@ -173,7 +176,16 @@ export async function getDefaultContainerClient(): Promise<ContainerClient> {
             required: true
         });
 
-        const credential = new DefaultAzureCredential();
+        const clientId = core.getInput(Inputs.Container, {
+            required: false
+        });
+
+        const options = {} as DefaultAzureCredentialOptions;
+        if (clientId !== "") {
+            options.managedIdentityClientId = clientId;
+        }
+
+        const credential = new DefaultAzureCredential(options);
 
         const blobServiceClient = new BlobServiceClient(url, credential);
 

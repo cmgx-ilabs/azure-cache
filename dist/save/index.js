@@ -98177,6 +98177,7 @@ var Inputs;
     Inputs["Container"] = "container";
     Inputs["FailOnMiss"] = "fail-on-miss";
     Inputs["Url"] = "url";
+    Inputs["ClientID"] = "client-id";
 })(Inputs = exports.Inputs || (exports.Inputs = {}));
 var Outputs;
 (function (Outputs) {
@@ -98446,7 +98447,14 @@ async function getDefaultContainerClient() {
         const containerName = core.getInput(constants_1.Inputs.Container, {
             required: true
         });
-        const credential = new identity_1.DefaultAzureCredential();
+        const clientId = core.getInput(constants_1.Inputs.Container, {
+            required: false
+        });
+        const options = {};
+        if (clientId !== "") {
+            options.managedIdentityClientId = clientId;
+        }
+        const credential = new identity_1.DefaultAzureCredential(options);
         const blobServiceClient = new storage_blob_1.BlobServiceClient(url, credential);
         core.info(`Connecting to storage account container: ${containerName}`);
         const container = blobServiceClient.getContainerClient(containerName);
