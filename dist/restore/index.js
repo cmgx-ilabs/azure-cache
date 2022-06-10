@@ -90669,7 +90669,7 @@ async function getDefaultContainerClient() {
             core.debug(`clientId: ${options.managedIdentityClientId}`);
         }
         const credential = new identity_1.DefaultAzureCredential(options);
-        const blobServiceClient = new storage_blob_1.BlobServiceClient(url, credential);
+        const blobServiceClient = new storage_blob_1.BlobServiceClient(expand(url), credential);
         core.info(`Connecting to storage account container: ${containerName}`);
         const container = blobServiceClient.getContainerClient(containerName);
         if (!(await container.exists())) {

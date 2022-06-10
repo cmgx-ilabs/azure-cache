@@ -189,7 +189,10 @@ export async function getDefaultContainerClient(): Promise<ContainerClient> {
 
         const credential = new DefaultAzureCredential(options);
 
-        const blobServiceClient = new BlobServiceClient(url, credential);
+        const blobServiceClient = new BlobServiceClient(
+            expand(url),
+            credential
+        );
 
         core.info(`Connecting to storage account container: ${containerName}`);
         const container = blobServiceClient.getContainerClient(containerName);
