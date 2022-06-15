@@ -98398,7 +98398,7 @@ async function storeCache(container, key, files) {
     const to = (await (0, execa_1.execa)("mktemp")).stdout;
     const from = (await (0, execa_1.execa)("mktemp")).stdout;
     await fs_1.promises.writeFile(from, files.join("\n"));
-    const zstd = await (0, execa_1.execa)("tar", ["-cf", to, `--files-from=${from}`, `--zstd`], {
+    const zstd = await (0, execa_1.execa)("tar", ["-cfH", to, `posix`, `--files-from=${from}`, `--zstd`], {
         stderr: "inherit"
     });
     if (zstd.exitCode != 0) {

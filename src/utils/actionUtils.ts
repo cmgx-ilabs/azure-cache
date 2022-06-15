@@ -116,7 +116,7 @@ export async function storeCache(
 
     const zstd = await execa(
         "tar",
-        ["-cf", to, `--files-from=${from}`, `--zstd`],
+        ["-cfH", to, `posix`, `--files-from=${from}`, `--zstd`],
         {
             stderr: "inherit"
         }
